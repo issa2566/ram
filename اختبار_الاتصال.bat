@@ -1,0 +1,49 @@
+@echo off
+chcp 65001 > nul
+color 0A
+cls
+
+echo.
+echo    ╔═══════════════════════════════════════════════════════╗
+echo    ║                                                       ║
+echo    ║         🔍 اختبار الاتصال بالخادم                    ║
+echo    ║                                                       ║
+echo    ╚═══════════════════════════════════════════════════════╝
+echo.
+
+echo    [1/3] اختبار Backend...
+curl -s http://localhost:3000 >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo          ✅ Backend يعمل على http://localhost:3000
+) else (
+    echo          ❌ Backend لا يعمل - تأكد من تشغيله
+)
+echo.
+
+echo    [2/3] اختبار Frontend...
+curl -s http://localhost:8080 >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo          ✅ Frontend يعمل على http://localhost:8080
+) else (
+    echo          ❌ Frontend لا يعمل - تأكد من تشغيله
+)
+echo.
+
+echo    [3/3] اختبار API تسجيل الدخول...
+curl -s -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"email\":\"admin@example.com\",\"password\":\"admin123\"}" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo          ✅ API تسجيل الدخول يعمل
+) else (
+    echo          ❌ API تسجيل الدخول لا يعمل
+)
+echo.
+
+echo    📋 ملخص الاختبار:
+echo       • تأكد من تشغيل PostgreSQL
+echo       • تأكد من تشغيل Backend (المنفذ 3000)
+echo       • تأكد من تشغيل Frontend (المنفذ 8080)
+echo       • استخدم البيانات: admin@example.com / admin123
+echo.
+
+pause
+

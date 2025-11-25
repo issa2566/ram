@@ -1,0 +1,21 @@
+{
+  "name": "github-setup-script",
+  "version": "1.0.0",
+  "description": "سكربت لإعداد مشروع Git وربطه بـ GitHub تلقائيًا",
+  "main": "github-setup.js",
+  "scripts": {
+    "start": "node github-setup.js",
+    "setup": "node github-setup.js"
+  },
+  "keywords": [
+    "git",
+    "github",
+    "automation",
+    "setup"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=12.0.0"
+  }
+}

@@ -1,0 +1,142 @@
+═══════════════════════════════════════════════════════════
+    🚀 INSTRUCTIONS DE DÉMARRAGE - LISEZ-MOI
+═══════════════════════════════════════════════════════════
+
+❌ PROBLÈME:
+   - ERR_CONNECTION_REFUSED
+   - Ce site est inaccessible
+   - Échec de connexion
+
+🔍 CAUSE:
+   Le serveur Backend n'est pas démarré
+
+═══════════════════════════════════════════════════════════
+
+✅ SOLUTION RAPIDE (1 CLIC):
+
+───────────────────────────────────────────────────────────
+🎯 Méthode 1: Démarrage automatique complet (LE PLUS FACILE)
+───────────────────────────────────────────────────────────
+
+1. Double-cliquez sur: DEMARRER_TOUT.bat
+
+2. Attendez que le navigateur s'ouvre automatiquement
+
+3. Cliquez sur "Se connecter"
+
+4. Connectez-vous avec:
+   Email: admin@example.com
+   Mot de passe: admin123
+
+5. ✅ Terminé!
+
+───────────────────────────────────────────────────────────
+🎯 Méthode 2: Démarrage manuel (étape par étape)
+───────────────────────────────────────────────────────────
+
+Étape 1: Démarrer le Backend
+   - Double-cliquez sur: DEMARRER_BACKEND.bat
+   - Attendez de voir: "🚀 الخادم يعمل على المنفذ 3000"
+   - ⚠️ NE FERMEZ PAS cette fenêtre!
+
+Étape 2: Démarrer le Frontend
+   - Double-cliquez sur: DEMARRER_FRONTEND.bat
+   - Attendez de voir: "Local: http://localhost:8080"
+   - ⚠️ NE FERMEZ PAS cette fenêtre!
+
+Étape 3: Ouvrir le navigateur
+   - Ouvrez: http://localhost:8080
+   - Cliquez sur "Se connecter"
+   - Connectez-vous
+
+───────────────────────────────────────────────────────────
+🎯 Méthode 3: Ligne de commande
+───────────────────────────────────────────────────────────
+
+# Fenêtre 1 - Backend:
+cd C:\Users\PC\Desktop\newprej\backend
+node server.js
+
+# Fenêtre 2 - Frontend:
+cd C:\Users\PC\Desktop\newprej\auto-display-replicator-main
+npm run dev
+
+# Puis ouvrez: http://localhost:8080
+
+═══════════════════════════════════════════════════════════
+
+📋 COMPTES DE TEST:
+
+| Email                 | Mot de passe  | Nom         |
+|----------------------|---------------|-------------|
+| admin@example.com    | admin123      | Admin       |
+| ahmed@example.com    | password123   | أحمد محمد   |
+| fatima@example.com   | password123   | فاطمة علي   |
+
+═══════════════════════════════════════════════════════════
+
+⚠️ NOTES IMPORTANTES:
+
+✅ Démarrez TOUJOURS le Backend en premier
+✅ Ensuite démarrez le Frontend
+✅ NE fermez PAS les fenêtres Terminal
+✅ PostgreSQL doit être en cours d'exécution
+
+═══════════════════════════════════════════════════════════
+
+🔧 POUR ARRÊTER LE PROJET:
+
+Méthode 1: Fermez les fenêtres Backend et Frontend
+
+Méthode 2: Ouvrez Command Prompt et tapez:
+   taskkill /f /im node.exe
+
+═══════════════════════════════════════════════════════════
+
+🧪 TEST RAPIDE:
+
+1. Le Backend fonctionne?
+   Ouvrez: http://localhost:3000
+   Vous devriez voir: "مرحباً بك في API"
+
+2. Le Frontend fonctionne?
+   Ouvrez: http://localhost:8080
+   Vous devriez voir la page d'accueil
+
+3. La connexion fonctionne?
+   Cliquez "Se connecter"
+   Connectez-vous avec admin@example.com
+
+═══════════════════════════════════════════════════════════
+
+💡 CONSEILS:
+
+- Utilisez DEMARRER_TOUT.bat pour tout démarrer automatiquement
+- Ne fermez pas les fenêtres Terminal
+- Si vous rencontrez un problème, fermez tout et redémarrez
+- PostgreSQL doit être en cours d'exécution avant de démarrer le Backend
+
+═══════════════════════════════════════════════════════════
+
+🎯 RÉSULTAT ATTENDU:
+
+✅ Backend fonctionne sur http://localhost:3000
+✅ Frontend fonctionne sur http://localhost:8080
+✅ La connexion fonctionne
+✅ Messages en français
+✅ Création de nouveaux comptes fonctionne
+
+═══════════════════════════════════════════════════════════
+
+📞 FICHIERS IMPORTANTS:
+
+- DEMARRER_TOUT.bat          ← COMMENCEZ ICI
+- DEMARRER_BACKEND.bat       ← Backend seulement
+- DEMARRER_FRONTEND.bat      ← Frontend seulement
+- LISEZ-MOI.txt              ← Ce fichier
+
+═══════════════════════════════════════════════════════════
+
+🚀 COMMENCEZ MAINTENANT: Double-cliquez sur DEMARRER_TOUT.bat
+
+═══════════════════════════════════════════════════════════

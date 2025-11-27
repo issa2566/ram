@@ -90,10 +90,10 @@ timeout /t 10 /nobreak
 
 echo.
 echo 🧪 اختبار Backend...
-curl -s http://localhost:3000 >nul 2>&1
+curl -s http://69.169.108.182:3000 >nul 2>&1
 
 if %ERRORLEVEL% EQU 0 (
-    echo ✅ Backend يعمل بنجاح على http://localhost:3000
+    echo ✅ Backend يعمل بنجاح على http://69.169.108.182:3000
 ) else (
     echo ⚠️ Backend قد لا يعمل - تحقق من النافذة الأخرى
 )
@@ -130,7 +130,7 @@ echo     ✅ المشروع يعمل الآن!
 echo ═══════════════════════════════════════════════════════════
 echo.
 echo 📍 الروابط:
-echo    Backend:  http://localhost:3000
+echo    Backend:  http://69.169.108.182:3000
 echo    Frontend: http://localhost:8080
 echo.
 echo 🎯 للدخول:

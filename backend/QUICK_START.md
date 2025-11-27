@@ -28,18 +28,18 @@ npm start
 ```
 
 ### 4️⃣ اختبار API
-افتح المتصفح على: **http://localhost:3000**
+افتح المتصفح على: **http://69.169.108.182:3000**
 
 ## 🧪 اختبار سريع
 
 ### عرض جميع المستخدمين:
 ```bash
-curl http://localhost:3000/users
+curl http://69.169.108.182:3000/users
 ```
 
 ### إضافة مستخدم جديد:
 ```bash
-curl -X POST http://localhost:3000/users \
+curl -X POST http://69.169.108.182:3000/users \
   -H "Content-Type: application/json" \
   -d '{"name":"محمد علي","email":"mohamed@example.com"}'
 ```

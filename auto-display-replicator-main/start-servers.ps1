@@ -12,7 +12,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; npm ru
 
 Write-Host ""
 Write-Host "Both servers are starting..." -ForegroundColor Green
-Write-Host "Database: http://localhost:3001" -ForegroundColor Cyan
+Write-Host "Database: http://69.169.108.182:3000" -ForegroundColor Cyan
 Write-Host "Application: http://localhost:8080" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to exit..." -ForegroundColor White

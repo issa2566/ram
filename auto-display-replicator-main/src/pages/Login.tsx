@@ -21,7 +21,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch('http://69.169.108.182:3000/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3000/auth/register', {
+      const response = await fetch('http://69.169.108.182:3000/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

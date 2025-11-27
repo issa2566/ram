@@ -88,7 +88,7 @@ psql -U postgres
 
 ✅ تم تصحيح: auto-display-replicator-main\src\api\search.ts
    من: const API_BASE_URL = 'http://localhost:3001';
-   إلى: const API_BASE_URL = 'http://localhost:3000';
+   إلى: const API_BASE_URL = 'http://69.169.108.182:3000';
 
 ✅ تم تحديث: backend\db.js
    كلمة المرور: 'postgres' (قد تحتاج للتغيير)
@@ -99,7 +99,7 @@ psql -U postgres
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Backend يعمل؟
-   افتح: http://localhost:3000
+   افتح: http://69.169.108.182:3000
    يجب أن ترى: {"message":"مرحباً بك"}
    
 Frontend يعمل?

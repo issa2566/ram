@@ -13,7 +13,7 @@ echo.
 
 echo    [1/3] التحقق من Backend...
 cd /d "%~dp0backend"
-curl -s http://localhost:3000 >nul 2>&1
+curl -s http://69.169.108.182:3000 >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo          ✅ Backend يعمل
 ) else (
@@ -39,7 +39,7 @@ echo.
 
 echo    [3/3] اختبار تسجيل الدخول...
 echo          🔐 جاري اختبار تسجيل الدخول...
-node -e "const fetch = require('node-fetch'); fetch('http://localhost:3000/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: 'admin@example.com', password: 'admin123'})}).then(r => r.json()).then(data => {console.log('✅ نتيجة تسجيل الدخول:'); console.log(JSON.stringify(data, null, 2)); if(data.success) console.log('🎉 تسجيل الدخول نجح!'); else console.log('❌ تسجيل الدخول فشل:', data.error);}).catch(err => console.log('❌ خطأ في الاتصال:', err.message))"
+node -e "const fetch = require('node-fetch'); fetch('http://69.169.108.182:3000/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: 'admin@example.com', password: 'admin123'})}).then(r => r.json()).then(data => {console.log('✅ نتيجة تسجيل الدخول:'); console.log(JSON.stringify(data, null, 2)); if(data.success) console.log('🎉 تسجيل الدخول نجح!'); else console.log('❌ تسجيل الدخول فشل:', data.error);}).catch(err => console.log('❌ خطأ في الاتصال:', err.message))"
 echo.
 
 echo    📋 النتائج:

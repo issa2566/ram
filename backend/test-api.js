@@ -3,7 +3,7 @@
 
 const http = require('http');
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://69.169.108.182:3000';
 
 // دالة لعمل طلب HTTP
 function makeRequest(method, path, data = null) {

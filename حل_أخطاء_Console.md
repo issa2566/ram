@@ -4,9 +4,9 @@
 
 ### 1️⃣ **404 على `/searchOptions`**
 ```
-GET http://localhost:3000/searchOptions?field=marque 404 (Not Found)
-GET http://localhost:3000/searchOptions?field=modele 404 (Not Found)
-GET http://localhost:3000/searchOptions?field=annee 404 (Not Found)
+GET http://69.169.108.182:3000/searchOptions?field=marque 404 (Not Found)
+GET http://69.169.108.182:3000/searchOptions?field=modele 404 (Not Found)
+GET http://69.169.108.182:3000/searchOptions?field=annee 404 (Not Found)
 ```
 
 **السبب:** Backend لا يحتوي على endpoint `/searchOptions`
@@ -23,7 +23,7 @@ GET http://localhost:3000/searchOptions?field=annee 404 (Not Found)
 
 ### 2️⃣ **500 على `/auth/login`** ⚠️ **مهم**
 ```
-POST http://localhost:3000/auth/login 500 (Internal Server Error)
+POST http://69.169.108.182:3000/auth/login 500 (Internal Server Error)
 ```
 
 **السبب:** مشكلة في الاتصال بقاعدة بيانات PostgreSQL
@@ -98,7 +98,7 @@ START_PROJECT_FINAL.bat
 
 ### اختبر Backend:
 ```bash
-curl http://localhost:3000
+curl http://69.169.108.182:3000
 ```
 يجب أن ترى: `{"message":"مرحباً بك"}`
 

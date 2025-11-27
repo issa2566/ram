@@ -13,7 +13,7 @@ start "Application Server" cmd /k "npm run dev"
 
 echo.
 echo Both servers are starting...
-echo Database: http://localhost:3001
+echo Database: http://69.169.108.182:3000
 echo Application: http://localhost:8080
 echo.
 echo Press any key to exit...

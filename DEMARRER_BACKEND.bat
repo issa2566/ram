@@ -46,11 +46,11 @@ echo ═════════════════════════
 echo     ✅ Démarrage du serveur...
 echo ═══════════════════════════════════════════════════════════
 echo.
-echo 📍 URL du serveur: http://localhost:3000
+echo 📍 URL du serveur: http://69.169.108.182:3000
 echo.
 echo ⚠️  NE FERMEZ PAS CETTE FENÊTRE!
 echo.
-echo Pour tester: ouvrez http://localhost:3000 dans votre navigateur
+echo Pour tester: ouvrez http://69.169.108.182:3000 dans votre navigateur
 echo.
 echo ═══════════════════════════════════════════════════════════
 echo.

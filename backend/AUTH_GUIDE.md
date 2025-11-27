@@ -128,14 +128,14 @@ npm start
 
 #### تسجيل مستخدم جديد:
 ```bash
-curl -X POST http://localhost:3000/auth/register \
+curl -X POST http://69.169.108.182:3000/auth/register \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"محمد علي\",\"email\":\"mohamed@example.com\",\"password\":\"password123\",\"phone\":\"0612345678\"}"
 ```
 
 #### تسجيل الدخول:
 ```bash
-curl -X POST http://localhost:3000/auth/login \
+curl -X POST http://69.169.108.182:3000/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"ahmed@example.com\",\"password\":\"password123\"}"
 ```
@@ -232,7 +232,7 @@ curl -X POST http://localhost:3000/auth/login \
 ### المشكلة: خطأ في الاتصال بالخادم
 **الحل:**
 - تأكد من تشغيل Backend (`npm start` في مجلد backend)
-- تأكد من أن الخادم يعمل على http://localhost:3000
+- تأكد من أن الخادم يعمل على http://69.169.108.182:3000
 
 ### المشكلة: البريد الإلكتروني مسجل بالفعل
 **الحل:**

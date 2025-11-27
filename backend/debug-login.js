@@ -1,12 +1,12 @@
 // ملف تشخيص مشكلة تسجيل الدخول
 const http = require('http');
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://69.169.108.182:3000';
 
 // اختبار الاتصال بالخادم
 function testServerConnection() {
   return new Promise((resolve, reject) => {
-    const req = http.request('http://localhost:3000', (res) => {
+    const req = http.request('http://69.169.108.182:3000', (res) => {
       let body = '';
       res.on('data', (chunk) => body += chunk);
       res.on('end', () => {
@@ -36,7 +36,7 @@ function testLogin() {
     });
     
     const options = {
-      hostname: 'localhost',
+      hostname: '69.169.108.182',
       port: 3000,
       path: '/auth/login',
       method: 'POST',

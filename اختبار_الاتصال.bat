@@ -12,9 +12,9 @@ echo    ╚═══════════════════════
 echo.
 
 echo    [1/3] اختبار Backend...
-curl -s http://localhost:3000 >nul 2>&1
+curl -s http://69.169.108.182:3000 >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo          ✅ Backend يعمل على http://localhost:3000
+    echo          ✅ Backend يعمل على http://69.169.108.182:3000
 ) else (
     echo          ❌ Backend لا يعمل - تأكد من تشغيله
 )
@@ -30,7 +30,7 @@ if %ERRORLEVEL% EQU 0 (
 echo.
 
 echo    [3/3] اختبار API تسجيل الدخول...
-curl -s -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"email\":\"admin@example.com\",\"password\":\"admin123\"}" >nul 2>&1
+curl -s -X POST http://69.169.108.182:3000/auth/login -H "Content-Type: application/json" -d "{\"email\":\"admin@example.com\",\"password\":\"admin123\"}" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo          ✅ API تسجيل الدخول يعمل
 ) else (

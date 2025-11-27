@@ -96,7 +96,7 @@ Méthode 2: Ouvrez Command Prompt et tapez:
 🧪 TEST RAPIDE:
 
 1. Le Backend fonctionne?
-   Ouvrez: http://localhost:3000
+   Ouvrez: http://69.169.108.182:3000
    Vous devriez voir: "مرحباً بك في API"
 
 2. Le Frontend fonctionne?
@@ -120,7 +120,7 @@ Méthode 2: Ouvrez Command Prompt et tapez:
 
 🎯 RÉSULTAT ATTENDU:
 
-✅ Backend fonctionne sur http://localhost:3000
+✅ Backend fonctionne sur http://69.169.108.182:3000
 ✅ Frontend fonctionne sur http://localhost:8080
 ✅ La connexion fonctionne
 ✅ Messages en français

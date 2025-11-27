@@ -17,7 +17,7 @@ timeout /t 5 /nobreak > nul
 
 echo.
 echo 🧪 اختبار الخادم...
-curl http://localhost:3000 > nul 2>&1
+curl http://69.169.108.182:3000 > nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo ✅ الخادم يعمل بنجاح!
 ) else (

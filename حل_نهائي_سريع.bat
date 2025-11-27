@@ -33,7 +33,7 @@ echo          ✅ تم
 
 echo.
 echo          🚀 تشغيل Backend...
-start "🚀 Backend SQLite" cmd /k "color 0A && echo ╔═════════════════════════════════════════════╗ && echo ║  Backend SQLite يعمل                        ║ && echo ╚═════════════════════════════════════════════╝ && echo. && echo 📍 URL: http://localhost:3000 && echo 🗄️  قاعدة البيانات: SQLite && echo. && echo ⚠️  لا تغلق هذه النافذة! && echo. && node server-sqlite.js"
+start "🚀 Backend SQLite" cmd /k "color 0A && echo ╔═════════════════════════════════════════════╗ && echo ║  Backend SQLite يعمل                        ║ && echo ╚═════════════════════════════════════════════╝ && echo. && echo 📍 URL: http://69.169.108.182:3000 && echo 🗄️  قاعدة البيانات: SQLite && echo. && echo ⚠️  لا تغلق هذه النافذة! && echo. && node server-sqlite.js"
 
 timeout /t 5 /nobreak > nul
 echo          ✅ Backend يعمل
@@ -63,7 +63,7 @@ echo.
 echo.
 echo    📍 الروابط:
 echo       • Frontend: http://localhost:8080
-echo       • Backend:  http://localhost:3000
+echo       • Backend:  http://69.169.108.182:3000
 echo.
 echo    🔑 حسابات تسجيل الدخول:
 echo.

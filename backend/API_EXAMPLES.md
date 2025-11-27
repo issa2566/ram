@@ -2,7 +2,7 @@
 
 ## 🔗 رابط الـ API الأساسي
 ```
-http://localhost:3000
+http://69.169.108.182:3000
 ```
 
 ---
@@ -11,17 +11,17 @@ http://localhost:3000
 
 ### باستخدام المتصفح:
 ```
-http://localhost:3000/users
+http://69.169.108.182:3000/users
 ```
 
 ### باستخدام cURL:
 ```bash
-curl http://localhost:3000/users
+curl http://69.169.108.182:3000/users
 ```
 
 ### باستخدام JavaScript (Fetch):
 ```javascript
-fetch('http://localhost:3000/users')
+fetch('http://69.169.108.182:3000/users')
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));
@@ -50,17 +50,17 @@ fetch('http://localhost:3000/users')
 
 ### باستخدام المتصفح:
 ```
-http://localhost:3000/users/1
+http://69.169.108.182:3000/users/1
 ```
 
 ### باستخدام cURL:
 ```bash
-curl http://localhost:3000/users/1
+curl http://69.169.108.182:3000/users/1
 ```
 
 ### باستخدام JavaScript (Fetch):
 ```javascript
-fetch('http://localhost:3000/users/1')
+fetch('http://69.169.108.182:3000/users/1')
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));
@@ -86,14 +86,14 @@ fetch('http://localhost:3000/users/1')
 
 ### باستخدام cURL:
 ```bash
-curl -X POST http://localhost:3000/users \
+curl -X POST http://69.169.108.182:3000/users \
   -H "Content-Type: application/json" \
   -d '{"name":"محمد علي","email":"mohamed@example.com"}'
 ```
 
 ### باستخدام JavaScript (Fetch):
 ```javascript
-fetch('http://localhost:3000/users', {
+fetch('http://69.169.108.182:3000/users', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -115,7 +115,7 @@ $body = @{
     email = "mohamed@example.com"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:3000/users" `
+Invoke-RestMethod -Uri "http://69.169.108.182:3000/users" `
   -Method POST `
   -Body $body `
   -ContentType "application/json"
@@ -142,14 +142,14 @@ Invoke-RestMethod -Uri "http://localhost:3000/users" `
 
 ### باستخدام cURL:
 ```bash
-curl -X PUT http://localhost:3000/users/1 \
+curl -X PUT http://69.169.108.182:3000/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"أحمد محمد المحدث","email":"ahmed.updated@example.com"}'
 ```
 
 ### باستخدام JavaScript (Fetch):
 ```javascript
-fetch('http://localhost:3000/users/1', {
+fetch('http://69.169.108.182:3000/users/1', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json'
@@ -171,7 +171,7 @@ $body = @{
     email = "ahmed.updated@example.com"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:3000/users/1" `
+Invoke-RestMethod -Uri "http://69.169.108.182:3000/users/1" `
   -Method PUT `
   -Body $body `
   -ContentType "application/json"
@@ -198,12 +198,12 @@ Invoke-RestMethod -Uri "http://localhost:3000/users/1" `
 
 ### باستخدام cURL:
 ```bash
-curl -X DELETE http://localhost:3000/users/1
+curl -X DELETE http://69.169.108.182:3000/users/1
 ```
 
 ### باستخدام JavaScript (Fetch):
 ```javascript
-fetch('http://localhost:3000/users/1', {
+fetch('http://69.169.108.182:3000/users/1', {
   method: 'DELETE'
 })
   .then(response => response.json())
@@ -213,7 +213,7 @@ fetch('http://localhost:3000/users/1', {
 
 ### باستخدام PowerShell:
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:3000/users/1" -Method DELETE
+Invoke-RestMethod -Uri "http://69.169.108.182:3000/users/1" -Method DELETE
 ```
 
 ### النتيجة المتوقعة:
@@ -241,12 +241,12 @@ Invoke-RestMethod -Uri "http://localhost:3000/users/1" -Method DELETE
 
 2. **لعرض المستخدمين:**
    - Method: `GET`
-   - URL: `http://localhost:3000/users`
+   - URL: `http://69.169.108.182:3000/users`
    - اضغط `Send`
 
 3. **لإضافة مستخدم:**
    - Method: `POST`
-   - URL: `http://localhost:3000/users`
+   - URL: `http://69.169.108.182:3000/users`
    - اذهب إلى تبويب `Body`
    - اختر `raw` و `JSON`
    - أدخل:
@@ -260,7 +260,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/users/1" -Method DELETE
 
 4. **لتعديل مستخدم:**
    - Method: `PUT`
-   - URL: `http://localhost:3000/users/1`
+   - URL: `http://69.169.108.182:3000/users/1`
    - اذهب إلى تبويب `Body`
    - اختر `raw` و `JSON`
    - أدخل البيانات الجديدة
@@ -268,7 +268,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/users/1" -Method DELETE
 
 5. **لحذف مستخدم:**
    - Method: `DELETE`
-   - URL: `http://localhost:3000/users/1`
+   - URL: `http://69.169.108.182:3000/users/1`
    - اضغط `Send`
 
 ---

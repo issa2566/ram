@@ -14,7 +14,7 @@ npm run dev:full
 
 ### 3. Access the Application
 - **Frontend:** `http://localhost:8080`
-- **Database API:** `http://localhost:3001`
+- **Database API:** `http://69.169.108.182:3000`
 - **Login as admin:** `admin` / `admin123`
 
 ## ⚠️ Important: Two Servers Required
@@ -24,7 +24,7 @@ npm run dev:full
 npm run db
 ```
 - **Port:** 3001
-- **URL:** http://localhost:3001
+- **URL:** http://69.169.108.182:3000
 - **Purpose:** Store all data changes
 
 ### Application Server (React)
@@ -41,7 +41,7 @@ npm run dev
 **Cause:** Database server not running
 **Solution:**
 1. Run `npm run db`
-2. Verify http://localhost:3001 is working
+2. Verify http://69.169.108.182:3000 is working
 3. Restart the application
 
 ### Problem: Connection error

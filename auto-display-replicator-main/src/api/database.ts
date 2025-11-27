@@ -1,5 +1,5 @@
 // Database API using JSON Server
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://69.169.108.182:3000';
 
 export interface ProductData {
   id?: string;

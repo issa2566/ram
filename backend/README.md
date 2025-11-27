@@ -72,7 +72,7 @@ npm start
 npm run dev
 ```
 
-سيعمل الخادم على: **http://localhost:3000**
+سيعمل الخادم على: **http://69.169.108.182:3000**
 
 ## 📡 نقاط النهاية (API Endpoints)
 
@@ -121,7 +121,7 @@ Content-Type: application/json
 
 **مثال باستخدام cURL:**
 ```bash
-curl -X POST http://localhost:3000/users \
+curl -X POST http://69.169.108.182:3000/users \
   -H "Content-Type: application/json" \
   -d '{"name":"خالد أحمد","email":"khaled@example.com"}'
 ```
@@ -139,7 +139,7 @@ Content-Type: application/json
 
 **مثال:**
 ```bash
-curl -X PUT http://localhost:3000/users/1 \
+curl -X PUT http://69.169.108.182:3000/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"أحمد محمد المحدث","email":"ahmed.new@example.com"}'
 ```
@@ -151,7 +151,7 @@ DELETE /users/:id
 
 **مثال:**
 ```bash
-curl -X DELETE http://localhost:3000/users/1
+curl -X DELETE http://69.169.108.182:3000/users/1
 ```
 
 ## 🧪 اختبار الـ API
@@ -165,25 +165,25 @@ curl -X DELETE http://localhost:3000/users/1
 
 ```bash
 # عرض جميع المستخدمين
-curl http://localhost:3000/users
+curl http://69.169.108.182:3000/users
 
 # إضافة مستخدم جديد
-curl -X POST http://localhost:3000/users \
+curl -X POST http://69.169.108.182:3000/users \
   -H "Content-Type: application/json" \
   -d '{"name":"محمد علي","email":"mohamed@example.com"}'
 
 # تعديل مستخدم
-curl -X PUT http://localhost:3000/users/1 \
+curl -X PUT http://69.169.108.182:3000/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"أحمد محمد الجديد"}'
 
 # حذف مستخدم
-curl -X DELETE http://localhost:3000/users/1
+curl -X DELETE http://69.169.108.182:3000/users/1
 ```
 
 ### باستخدام المتصفح:
-- افتح: http://localhost:3000
-- للحصول على جميع المستخدمين: http://localhost:3000/users
+- افتح: http://69.169.108.182:3000
+- للحصول على جميع المستخدمين: http://69.169.108.182:3000/users
 
 ## 📁 هيكل المشروع
 

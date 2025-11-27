@@ -48,7 +48,7 @@ echo          ✅ تم
 echo.
 
 echo    [4/5] تشغيل Backend...
-start "🚀 Backend Server - لا تغلق هذه النافذة!" cmd /k "echo Backend Server يعمل على http://localhost:3000 && echo. && echo ⚠️ لا تغلق هذه النافذة! && echo. && node server.js"
+start "🚀 Backend Server - لا تغلق هذه النافذة!" cmd /k "echo Backend Server يعمل على http://69.169.108.182:3000 && echo. && echo ⚠️ لا تغلق هذه النافذة! && echo. && node server.js"
 timeout /t 3 /nobreak > nul
 echo          ✅ Backend يعمل
 echo.
@@ -69,7 +69,7 @@ echo    ╚═══════════════════════
 echo.
 echo    📍 الروابط:
 echo       • Frontend: http://localhost:8080
-echo       • Backend:  http://localhost:3000
+echo       • Backend:  http://69.169.108.182:3000
 echo.
 echo    🎯 تسجيل الدخول:
 echo       • Email:        admin@example.com

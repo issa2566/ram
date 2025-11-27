@@ -58,7 +58,7 @@ echo     ✅ المشروع يعمل الآن!
 echo ═══════════════════════════════════════════════════════════
 echo.
 echo 📍 الروابط:
-echo    Backend:  http://localhost:3000
+echo    Backend:  http://69.169.108.182:3000
 echo    Frontend: http://localhost:8080
 echo.
 echo 🎯 للدخول:

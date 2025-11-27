@@ -97,7 +97,7 @@ echo    الخطوة 4: تشغيل Backend
 echo    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo.
 
-start "🚀 Backend - لا تغلق!" cmd /k "color 0A && echo ╔═════════════════════════════════════════════╗ && echo ║  Backend Server يعمل                       ║ && echo ╚═════════════════════════════════════════════╝ && echo. && echo 📍 URL: http://localhost:3000 && echo. && echo ⚠️  لا تغلق هذه النافذة! && echo. && node server.js"
+start "🚀 Backend - لا تغلق!" cmd /k "color 0A && echo ╔═════════════════════════════════════════════╗ && echo ║  Backend Server يعمل                       ║ && echo ╚═════════════════════════════════════════════╝ && echo. && echo 📍 URL: http://69.169.108.182:3000 && echo. && echo ⚠️  لا تغلق هذه النافذة! && echo. && node server.js"
 
 timeout /t 5 /nobreak > nul
 echo          ✅ Backend يعمل في نافذة منفصلة
@@ -126,7 +126,7 @@ echo.
 echo.
 echo    📍 الروابط:
 echo       • Frontend: http://localhost:8080
-echo       • Backend:  http://localhost:3000
+echo       • Backend:  http://69.169.108.182:3000
 echo.
 echo    🎯 الحسابات المتاحة:
 echo.

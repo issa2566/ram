@@ -3,150 +3,188 @@ const router = express.Router();
 const pool = require('../db');
 const bcrypt = require('bcrypt');
 
-// POST /auth/register - تسجيل مستخدم جديد
+/**
+ * POST /auth/register
+ * Register a new user
+ */
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, address } = req.body;
     
-    // التحقق من البيانات المطلوبة
+    // Input validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'الرجاء إدخال الاسم والبريد الإلكتروني وكلمة المرور'
+        error: 'Name, email, and password are required'
       });
     }
     
-    // التحقق من صحة البريد الإلكتروني
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        error: 'البريد الإلكتروني غير صحيح'
+        error: 'Invalid email format'
       });
     }
     
-    // التحقق من طول كلمة المرور
+    // Validate password length
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+        error: 'Password must be at least 6 characters long'
       });
     }
     
-    // التحقق من عدم تكرار البريد الإلكتروني
-    const checkEmail = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (checkEmail.rows.length > 0) {
+    // Check if email already exists
+    const emailCheck = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
+    );
+    
+    if (emailCheck.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        error: 'البريد الإلكتروني مسجل بالفعل'
+        error: 'Email already registered'
       });
     }
     
-    // تشفير كلمة المرور
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    // إضافة المستخدم
+    // Insert new user
     const result = await pool.query(
-      'INSERT INTO users (name, email, password, phone, address) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, phone, address, created_at',
-      [name, email, hashedPassword, phone || null, address || null]
+      `INSERT INTO users (name, email, password, phone, address) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id, name, email, phone, address, is_admin, created_at`,
+      [
+        name.trim(),
+        email.toLowerCase().trim(),
+        hashedPassword,
+        phone ? phone.trim() : null,
+        address ? address.trim() : null
+      ]
     );
     
     res.status(201).json({
       success: true,
-      message: 'تم التسجيل بنجاح',
+      message: 'User registered successfully',
       user: result.rows[0]
     });
+    
   } catch (error) {
-    console.error('❌ خطأ في التسجيل:', error.message);
+    console.error('Register error:', error.message);
+    
+    // Handle database constraint violations
+    if (error.code === '23505') { // Unique violation
+      return res.status(409).json({
+        success: false,
+        error: 'Email already registered'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'فشل في التسجيل',
-      message: error.message
+      error: 'Registration failed',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
 
-// POST /auth/login - تسجيل الدخول
+/**
+ * POST /auth/login
+ * Authenticate user and return user data
+ */
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // التحقق من البيانات المطلوبة
+    // Input validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور'
+        error: 'Email and password are required'
       });
     }
     
-    // البحث عن المستخدم
+    // Find user by email
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1',
-      [email]
+      [email.toLowerCase().trim()]
     );
     
     if (result.rows.length === 0) {
       return res.status(401).json({
         success: false,
-        error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        error: 'Invalid email or password'
       });
     }
     
     const user = result.rows[0];
     
-    // التحقق من كلمة المرور
+    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
-        error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        error: 'Invalid email or password'
       });
     }
     
-    // إرجاع بيانات المستخدم (بدون كلمة المرور)
+    // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
-    
-    console.log('🔍 بيانات المستخدم من قاعدة البيانات:', user);
-    console.log('🔍 بيانات المستخدم المرسلة للعميل:', userWithoutPassword);
-    console.log('🔍 is_admin:', user.is_admin);
-    console.log('🔍 role:', user.role);
     
     res.status(200).json({
       success: true,
-      message: 'تم تسجيل الدخول بنجاح',
+      message: 'Login successful',
       user: userWithoutPassword
     });
+    
   } catch (error) {
-    console.error('❌ خطأ في تسجيل الدخول:', error.message);
+    console.error('Login error:', error.message);
     res.status(500).json({
       success: false,
-      error: 'فشل في تسجيل الدخول',
-      message: error.message
+      error: 'Login failed',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
 
-// GET /auth/check-email/:email - التحقق من توفر البريد الإلكتروني
+/**
+ * GET /auth/check-email/:email
+ * Check if email is available
+ */
 router.get('/check-email/:email', async (req, res) => {
   try {
     const { email } = req.params;
     
-    const result = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email parameter is required'
+      });
+    }
+    
+    const result = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
+    );
     
     res.status(200).json({
       success: true,
       available: result.rows.length === 0
     });
+    
   } catch (error) {
-    console.error('❌ خطأ في التحقق من البريد:', error.message);
+    console.error('Check email error:', error.message);
     res.status(500).json({
       success: false,
-      error: 'فشل في التحقق من البريد الإلكتروني',
-      message: error.message
+      error: 'Failed to check email availability',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
 
 module.exports = router;
-

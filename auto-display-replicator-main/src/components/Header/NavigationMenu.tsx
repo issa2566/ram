@@ -40,11 +40,6 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'الزيوت',
-    path: '/huiles-auto',
-    icon: <Droplets className="w-4 h-4" />,
-  },
-  {
     label: 'قطع الغيار',
     path: '/brand-parts',
     icon: <Wrench className="w-4 h-4" />,

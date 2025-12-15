@@ -21,7 +21,8 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://69.169.108.182:3000/auth/login', {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,9 +32,9 @@ const Login = () => {
       
       const data = await response.json();
       
-      if (data.success) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setSuccess(`Connexion réussie! Bienvenue ${data.user.name} 🎉`);
+      if (data.success && data.data) {
+        localStorage.setItem('user', JSON.stringify(data.data));
+        setSuccess(`Connexion réussie! Bienvenue ${data.data.name} 🎉`);
         
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('userLogin'));
@@ -60,7 +61,8 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://69.169.108.182:3000/auth/register', {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

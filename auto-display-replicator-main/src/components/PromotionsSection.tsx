@@ -1,20 +1,52 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit2, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getProductById, createProduct, getProducts } from "@/api/database";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPromotions, updatePromotionImage, type PromotionData } from "@/api/database";
+import { uploadImage } from "@/services/uploadService";
+import { useToast } from "@/hooks/use-toast";
 
 const PromotionsSection = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [promotionImages, setPromotionImages] = useState<{[key: number]: string}>({});
   const [imageTransforms, setImageTransforms] = useState<{[key: number]: {translateX: number, translateY: number, scaleX: number, scaleY: number}}>({});
   const [promotionTexts, setPromotionTexts] = useState<{[key: number]: {title: string, subtitle: string, price: string, originalPrice: string}}>({});
+  const [isEditModalOpen, setIsEditModalOpen] = useState<number | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch promotions from database using React Query
+  const { data: promotionsData = [], isLoading: isLoadingPromotions } = useQuery({
+    queryKey: ['promotions'],
+    queryFn: getPromotions,
+    staleTime: 0, // Always fetch fresh data
+  });
+
+  // Convert promotions array to image map for easier access
+  const promotionImages: {[key: number]: string} = {};
+  promotionsData.forEach((promo: PromotionData) => {
+    if (promo.image) {
+      promotionImages[promo.id] = promo.image;
+    }
+  });
 
   const promotions = [
     {
@@ -41,41 +73,8 @@ const PromotionsSection = () => {
 
   const handleCardClick = async (promo: typeof promotions[0]) => {
     if (promo.productId) {
-      try {
-        // Check if product exists, if not create it first
-        let product = await getProductById(promo.productId);
-        
-        if (!product) {
-          // Product doesn't exist, create it now
-          const index = promotions.findIndex(p => p.productId === promo.productId);
-          const productData = {
-            id: promo.productId,
-            name: promo.title,
-            price: `${promo.price} ${promo.currency}`,
-            originalPrice: `${promo.originalPrice} ${promo.currency}`,
-            discount: promo.badge === "PROMO" ? "-25%" : undefined,
-            brand: "RAM Auto Motors",
-            sku: `PROMO-${promo.productId.toUpperCase().replace(/-/g, '')}`,
-            category: "Promotions",
-            loyaltyPoints: 5,
-            image: index === 0 ? "/ff.png" : index === 1 ? "/ll.png" : undefined,
-            images: index === 0 ? ["/ff.png", "/ll.png"] : index === 1 ? ["/ll.png", "/ff.png"] : undefined,
-            description: promo.subtitle,
-            factoryCode: `FACT-${promo.productId.toUpperCase()}`,
-            hasPreview: false,
-            hasOptions: false
-          };
-          
-          product = await createProduct(productData);
-        }
-        
-        // Navigate to product detail page
-        navigate(`/product-detail/${promo.productId}`);
-      } catch (error) {
-        console.error('Error handling card click:', error);
-        // Still navigate even if there's an error
-        navigate(`/product-detail/${promo.productId}`);
-      }
+      // Product detail page removed - navigate to catalogue instead
+      navigate('/catalogue');
     }
   };
 
@@ -118,26 +117,60 @@ const PromotionsSection = () => {
     }
   };
 
+  // Update promotion image mutation
+  const updatePromotionMutation = useMutation({
+    mutationFn: async ({ promoId, imageUrl }: { promoId: number; imageUrl: string }) => {
+      return await updatePromotionImage(promoId, imageUrl);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch promotions
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      toast({
+        title: "Succès",
+        description: "Image de promotion mise à jour avec succès",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de mettre à jour l'image",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     // Check if user is logged in
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
+    
+    // Check admin status periodically
+    const checkAdmin = () => {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.role === 'admin' || parsed?.isAdmin === true) {
+            setUser(parsed);
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+    checkAdmin();
+    const interval = setInterval(checkAdmin, 1000);
+    return () => clearInterval(interval);
 
-    // Load saved promotion images
-    const savedImages = localStorage.getItem('promotionImages');
-    if (savedImages) {
-      setPromotionImages(JSON.parse(savedImages));
-    }
-
-    // Load saved image transforms
+    // Load saved image transforms (keep in localStorage for now)
     const savedTransforms = localStorage.getItem('promotionImageTransforms');
     if (savedTransforms) {
       setImageTransforms(JSON.parse(savedTransforms));
     }
 
-    // Load saved promotion texts
+    // Load saved promotion texts (keep in localStorage for now)
     const savedTexts = localStorage.getItem('promotionTexts');
     if (savedTexts) {
       try {
@@ -147,54 +180,9 @@ const PromotionsSection = () => {
       }
     }
 
-    // Create promotion products if they don't exist
-    const createPromotionProducts = async () => {
-      try {
-        // Get all existing products first
-        const allProducts = await getProducts();
-        
-        for (let index = 0; index < promotions.length; index++) {
-          const promo = promotions[index];
-          if (promo.productId) {
-            // Check if product exists in the list
-            const existingProduct = allProducts.find((p: any) => p.id === promo.productId);
-            
-            if (!existingProduct) {
-              // Create the product with all required fields
-              const productData = {
-                id: promo.productId,
-                name: promo.title,
-                price: `${promo.price} ${promo.currency}`,
-                originalPrice: `${promo.originalPrice} ${promo.currency}`,
-                discount: promo.badge === "PROMO" ? "-25%" : undefined,
-                brand: "RAM Auto Motors",
-                sku: `PROMO-${promo.productId.toUpperCase().replace(/-/g, '')}`,
-                category: "Promotions",
-                loyaltyPoints: 5,
-                image: index === 0 ? "/ff.png" : index === 1 ? "/ll.png" : undefined,
-                images: index === 0 ? ["/ff.png", "/ll.png"] : index === 1 ? ["/ll.png", "/ff.png"] : undefined,
-                description: promo.subtitle,
-                factoryCode: `FACT-${promo.productId.toUpperCase()}`,
-                hasPreview: false,
-                hasOptions: false
-              };
-              
-              try {
-                await createProduct(productData);
-                console.log(`Product ${promo.productId} created successfully`);
-              } catch (createError) {
-                console.error(`Error creating product ${promo.productId}:`, createError);
-              }
-            } else {
-              console.log(`Product ${promo.productId} already exists`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error creating promotion products:', error);
-      }
-    };
-    createPromotionProducts();
+    // NOTE: Promotion products are created on-demand when user clicks "Commander"
+    // This prevents 409 SKU already exists errors on every page load
+    // See handleCardClick() function for product creation logic
 
     // Update scroll state on scroll
     const container = scrollContainerRef.current;
@@ -210,33 +198,97 @@ const PromotionsSection = () => {
     }
   }, []);
 
-  const handleImageUpload = (promoIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const isAdmin = user && (user.role === 'admin' || user.isAdmin === true);
+
+  const handleEditClick = (promoIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditModalOpen(promoIndex);
+    setSelectedImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setSelectedImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        const imageDataUrl = e.target?.result as string;
-        const newImages = { ...promotionImages, [promoIndex]: imageDataUrl };
-        setPromotionImages(newImages);
-        localStorage.setItem('promotionImages', JSON.stringify(newImages));
-        alert('Image uploaded successfully!');
+        setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleRemoveImage = (promoIndex: number) => {
-    const newImages = { ...promotionImages };
-    delete newImages[promoIndex];
-    setPromotionImages(newImages);
-    localStorage.setItem('promotionImages', JSON.stringify(newImages));
+  const handleSaveImage = async () => {
+    if (isEditModalOpen === null || !selectedImageFile) return;
     
-    const newTransforms = { ...imageTransforms };
-    delete newTransforms[promoIndex];
-    setImageTransforms(newTransforms);
-    localStorage.setItem('promotionImageTransforms', JSON.stringify(newTransforms));
+    setIsUploading(true);
+    try {
+      // Upload image to server
+      const uploadedImageUrl = await uploadImage(selectedImageFile);
+      
+      // Update promotion in database
+      await updatePromotionMutation.mutateAsync({
+        promoId: isEditModalOpen,
+        imageUrl: uploadedImageUrl
+      });
+      
+      // Close modal and reset state
+      setIsEditModalOpen(null);
+      setSelectedImageFile(null);
+      setImagePreview(null);
+    } catch (error) {
+      console.error('Error saving promotion image:', error);
+      // Error toast is handled by mutation onError
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (promoIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
     
-    alert('Image removed successfully!');
+    setIsUploading(true);
+    try {
+      // Upload image to server
+      const uploadedImageUrl = await uploadImage(file);
+      
+      // Update promotion in database
+      await updatePromotionMutation.mutateAsync({
+        promoId: promoIndex,
+        imageUrl: uploadedImageUrl
+      });
+    } catch (error) {
+      console.error('Error uploading promotion image:', error);
+      // Error toast is handled by mutation onError
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async (promoIndex: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) return;
+    
+    setIsUploading(true);
+    try {
+      // Remove image by setting it to null/empty
+      await updatePromotionMutation.mutateAsync({
+        promoId: promoIndex,
+        imageUrl: ''
+      });
+      
+      // Remove transforms
+      const newTransforms = { ...imageTransforms };
+      delete newTransforms[promoIndex];
+      setImageTransforms(newTransforms);
+      localStorage.setItem('promotionImageTransforms', JSON.stringify(newTransforms));
+    } catch (error) {
+      console.error('Error removing promotion image:', error);
+      // Error toast is handled by mutation onError
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleImageTransform = (promoIndex: number, field: string, value: number) => {
@@ -250,7 +302,6 @@ const PromotionsSection = () => {
     setImageTransforms(newTransforms);
     localStorage.setItem('promotionImageTransforms', JSON.stringify(newTransforms));
   };
-
   const resetImageTransform = (promoIndex: number) => {
     const newTransforms = {
       ...imageTransforms,
@@ -296,70 +347,90 @@ const PromotionsSection = () => {
   };
 
   return (
-    <section className="py-8 sm:py-12 md:py-16 lg:py-20 xl:py-24 2xl:py-28 bg-gradient-to-b from-white via-orange-50/20 to-gray-100/30 relative overflow-hidden">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 xl:py-20 bg-gradient-to-b from-white via-orange-50/20 to-gray-100/30 relative overflow-hidden w-full max-w-full">
       {/* Subtle texture overlay for depth */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(249,115,22,0.03)_0%,transparent_70%)] pointer-events-none" />
       
-      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 max-w-7xl lg:max-w-[1600px] relative z-10">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 relative z-10 overflow-hidden">
         
-        {/* Title - Premium Styling */}
-        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-black text-center mb-8 sm:mb-10 md:mb-12 lg:mb-16 xl:mb-20 text-[#F97316] drop-shadow-[0_4px_20px_rgba(249,115,22,0.3)] leading-tight tracking-tight">
+        {/* Title - Responsive Styling */}
+        <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-center mb-5 sm:mb-6 md:mb-8 lg:mb-10 text-[#F97316] leading-tight tracking-tight px-2">
           PROMOTIONS
         </h2>
         
+        {/* Loading State */}
+        {isLoadingPromotions && (
+          <div className="py-16 text-center">
+            <div className="inline-block h-8 w-8 rounded-full border-b-2 border-[#F97316] animate-spin" />
+            <p className="mt-4 text-gray-600">Chargement des promotions...</p>
+          </div>
+        )}
+        
         {/* Horizontal scrolling promotions display with controls */}
-        <div className="relative">
+        {!isLoadingPromotions && (
+        <div className="relative w-full">
           
-          {/* Desktop Layout (lg+) — Premium Scroll Buttons */}
-          {/* Scroll Left Button - Glass Effect, Always Visible on Desktop */}
+          {/* Scroll Left Button - Hidden on mobile */}
           <button
             onClick={scrollLeft}
             disabled={!canScrollLeft}
             aria-label="Scroll left"
-            className={`hidden sm:flex absolute left-2 lg:left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full bg-white/80 backdrop-blur-md border-2 border-white/40 hover:border-[#F97316]/50 shadow-[0_8px_24px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_32px_rgba(249,115,22,0.3)] transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
-              canScrollLeft ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed lg:opacity-50'
+            className={`hidden md:flex absolute -left-1 lg:left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-full bg-white/95 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316]/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
+              canScrollLeft ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'
             }`}
           >
-            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
+            <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
           </button>
 
-          {/* Scroll Right Button - Glass Effect, Always Visible on Desktop */}
+          {/* Scroll Right Button - Hidden on mobile */}
           <button
             onClick={scrollRight}
             disabled={!canScrollRight}
             aria-label="Scroll right"
-            className={`hidden sm:flex absolute right-2 lg:right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full bg-white/80 backdrop-blur-md border-2 border-white/40 hover:border-[#F97316]/50 shadow-[0_8px_24px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_32px_rgba(249,115,22,0.3)] transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
-              canScrollRight ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed lg:opacity-50'
+            className={`hidden md:flex absolute -right-1 lg:right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-full bg-white/95 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316]/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
+              canScrollRight ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'
             }`}
           >
-            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
+            <ChevronRight className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
           </button>
 
-          {/* Promotions Container - Smooth Snap Scrolling */}
+          {/* Promotions Container - Better mobile handling */}
           <div 
             ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-4 sm:gap-5 md:gap-6 lg:gap-8 pb-4 scrollbar-hide px-4 sm:px-6 md:px-8 lg:px-12 snap-x snap-mandatory"
+            className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-5 lg:gap-6 pb-3 sm:pb-4 scrollbar-hide px-1 sm:px-2 md:px-10 lg:px-12 snap-x snap-mandatory -webkit-overflow-scrolling-touch"
             style={{ 
               scrollBehavior: 'smooth',
-              scrollSnapType: 'x mandatory'
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
             {promotions.map((promo, index) => (
               <div
                 key={index}
-                className="group flex-shrink-0 snap-start cursor-pointer min-w-[280px] sm:min-w-[320px] md:min-w-[350px] lg:min-w-[420px] xl:min-w-[450px]"
+                className="group flex-shrink-0 snap-start cursor-pointer w-[260px] sm:w-[280px] md:w-[320px] lg:w-[380px] xl:w-[420px] relative"
                 style={{ scrollSnapAlign: 'center' }}
                 onClick={() => handleCardClick(promo)}
               >
-                <div className="bg-white rounded-2xl border-4 border-white/20 hover:border-[#F97316]/40 shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2),0_0_40px_rgba(249,115,22,0.25),12px_12px_0_rgba(249,115,22,0.2)] transition-all duration-300 hover:scale-105 active:scale-100 overflow-hidden h-full">
+                {/* Edit Button - Admin Only */}
+                {isAdmin && (
+                  <button
+                    onClick={(e) => handleEditClick(index, e)}
+                    className="absolute top-2 right-2 z-30 w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform duration-200 border border-gray-200"
+                    aria-label="Modifier l'image"
+                  >
+                    <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#f97316]" />
+                  </button>
+                )}
+                
+                <div className="bg-white rounded-xl sm:rounded-2xl border-2 sm:border-4 border-white/20 hover:border-[#F97316]/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-100 overflow-hidden h-full">
                   {index === 0 ? (
-                    // First card - display ff.png image
-                    <div className="flex flex-col justify-center items-center p-4 sm:p-5 md:p-6 lg:p-8">
-                      <div className="flex justify-center items-center w-full h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 mb-4 sm:mb-5 md:mb-6">
+                    // First card - display ff.png image or uploaded image from database
+                    <div className="flex flex-col justify-center items-center p-3 sm:p-4 md:p-5 lg:p-6">
+                      <div className="flex justify-center items-center w-full h-28 sm:h-32 md:h-40 lg:h-48 xl:h-52 mb-3 sm:mb-4 md:mb-5 relative">
                         <img
-                          src="/ff.png"
+                          src={promotionImages[0] || "/ff.png"}
                           alt="Promotion Image"
-                          className="w-full h-auto max-w-[250px] sm:max-w-[300px] md:max-w-[350px] lg:max-w-[400px] xl:max-w-[450px] object-contain mx-auto"
+                          className="w-full h-auto max-w-[200px] sm:max-w-[240px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[360px] object-contain mx-auto"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
@@ -380,7 +451,7 @@ const PromotionsSection = () => {
                             e.stopPropagation();
                             handleCardClick(promo);
                           }}
-                          className="group/btn relative w-full bg-gradient-to-r from-[#F97316] to-[#ea580c] hover:from-[#ea580c] hover:to-[#F97316] text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base md:text-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(249,115,22,0.5)] active:scale-100 active:translate-y-0 border-4 border-white/20 hover:border-white/40 overflow-hidden"
+                          className="group/btn relative w-full bg-gradient-to-r from-[#F97316] to-[#ea580c] hover:from-[#ea580c] hover:to-[#F97316] text-white font-semibold rounded-lg sm:rounded-xl px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-3.5 text-xs sm:text-sm md:text-base transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-100 border-2 sm:border-4 border-white/20 hover:border-white/40 overflow-hidden min-h-[44px]"
                         >
                           <span className="relative z-10">Commander</span>
                           <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
@@ -388,13 +459,13 @@ const PromotionsSection = () => {
                       </div>
                     </div>
                   ) : index === 1 ? (
-                    // Second card - display ll.png image
-                    <div className="flex flex-col justify-center items-center p-4 sm:p-5 md:p-6 lg:p-8">
-                      <div className="flex justify-center items-center w-full h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 mb-4 sm:mb-5 md:mb-6">
+                    // Second card - display ll.png image or uploaded image from database
+                    <div className="flex flex-col justify-center items-center p-3 sm:p-4 md:p-5 lg:p-6">
+                      <div className="flex justify-center items-center w-full h-28 sm:h-32 md:h-40 lg:h-48 xl:h-52 mb-3 sm:mb-4 md:mb-5 relative">
                         <img
-                          src="/ll.png"
+                          src={promotionImages[1] || "/ll.png"}
                           alt="Promotion Image"
-                          className="w-full h-auto max-w-[250px] sm:max-w-[300px] md:max-w-[350px] lg:max-w-[400px] xl:max-w-[450px] object-contain mx-auto"
+                          className="w-full h-auto max-w-[200px] sm:max-w-[240px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[360px] object-contain mx-auto"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
@@ -415,7 +486,7 @@ const PromotionsSection = () => {
                             e.stopPropagation();
                             handleCardClick(promo);
                           }}
-                          className="group/btn relative w-full bg-gradient-to-r from-[#F97316] to-[#ea580c] hover:from-[#ea580c] hover:to-[#F97316] text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base md:text-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(249,115,22,0.5)] active:scale-100 active:translate-y-0 border-4 border-white/20 hover:border-white/40 overflow-hidden"
+                          className="group/btn relative w-full bg-gradient-to-r from-[#F97316] to-[#ea580c] hover:from-[#ea580c] hover:to-[#F97316] text-white font-semibold rounded-lg sm:rounded-xl px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-3.5 text-xs sm:text-sm md:text-base transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-100 border-2 sm:border-4 border-white/20 hover:border-white/40 overflow-hidden min-h-[44px]"
                         >
                           <span className="relative z-10">Commander</span>
                           <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
@@ -424,7 +495,7 @@ const PromotionsSection = () => {
                     </div>
                   ) : (
                   <>
-                    <div className="absolute top-4 left-4 z-10">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10">
                       <Badge className="bg-gradient-to-r from-[#F97316] to-[#ea580c] text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-lg shadow-lg">
                         {promo.badge}
                       </Badge>
@@ -712,27 +783,97 @@ const PromotionsSection = () => {
             ))}
           </div>
 
-          {/* Scroll Indicators - Premium Animated Style */}
-          <div className="flex justify-center mt-6 sm:mt-8 space-x-2">
+          {/* Scroll Indicators */}
+          <div className="flex justify-center mt-3 sm:mt-4 md:mt-5 gap-2">
             <div 
-              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
                 canScrollLeft 
-                  ? 'bg-[#F97316] scale-125 shadow-[0_0_12px_rgba(249,115,22,0.8)]' 
-                  : 'bg-gray-300 hover:bg-gray-400'
+                  ? 'bg-[#F97316] scale-110 shadow-md' 
+                  : 'bg-gray-300'
               }`}
-              aria-label={canScrollLeft ? "Can scroll left" : "Cannot scroll left"}
+              aria-hidden="true"
             />
             <div 
-              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
                 canScrollRight 
-                  ? 'bg-[#F97316] scale-125 shadow-[0_0_12px_rgba(249,115,22,0.8)]' 
-                  : 'bg-gray-300 hover:bg-gray-400'
+                  ? 'bg-[#F97316] scale-110 shadow-md' 
+                  : 'bg-gray-300'
               }`}
-              aria-label={canScrollRight ? "Can scroll right" : "Cannot scroll right"}
+              aria-hidden="true"
             />
           </div>
+          {/* Mobile scroll hint */}
+          <p className="text-center text-xs text-gray-400 mt-2 md:hidden">← Glissez pour voir plus →</p>
         </div>
+        )}
       </div>
+
+      {/* Edit Image Modal */}
+      <Dialog open={isEditModalOpen !== null} onOpenChange={(open) => !open && setIsEditModalOpen(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifier l'image de la promotion</DialogTitle>
+            <DialogDescription>
+              Téléchargez une nouvelle image pour cette carte promotionnelle.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sélectionner une image</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Choisir une image
+              </Button>
+            </div>
+            {imagePreview && (
+              <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditModalOpen(null);
+                setSelectedImageFile(null);
+                setImagePreview(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSaveImage}
+              disabled={!selectedImageFile || isUploading}
+              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+            >
+              {isUploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

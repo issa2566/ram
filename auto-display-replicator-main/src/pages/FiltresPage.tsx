@@ -337,7 +337,7 @@ const FiltresPage = () => {
                   <div className="relative aspect-[4/3] md:aspect-[4/3] overflow-hidden bg-[var(--color-surface-muted)]">
                     <div 
                       className="w-full h-full flex items-center justify-center cursor-pointer luxury-transition-fast group-hover:scale-105"
-                      onClick={() => navigate(`/product-detail/${product.id}`)}
+                      onClick={() => navigate('/catalogue')}
                     >
                       {product.image ? (
                         <img 
@@ -498,7 +498,7 @@ const FiltresPage = () => {
                         
                         {/* CTA Row */}
                         <button
-                          onClick={() => navigate(`/product-detail/${product.id}`)}
+                          onClick={() => navigate('/catalogue')}
                           className="w-full luxury-gradient-primary text-white font-semibold rounded-2xl px-6 py-3 luxury-transition-fast hover:-translate-y-0.5 hover:shadow-[var(--shadow-glow-strong)] active:translate-y-0"
                         >
                           Voir détails

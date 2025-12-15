@@ -17,6 +17,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { uploadImage } from '../services/uploadService';
 
 interface UseImageUploadReturn {
   upload: (file: File) => Promise<string>;
@@ -115,21 +116,20 @@ export const useImageUpload = (): UseImageUploadReturn => {
       // Compress image
       const compressedFile = await compressImage(file);
 
-      // Create preview
+      // Create temporary preview
       const previewUrl = URL.createObjectURL(compressedFile);
       setPreview(previewUrl);
 
-      // TODO: Replace with actual API call
-      // const url = await uploadService.uploadImage(compressedFile, (percent) => {
-      //   setProgress(percent);
-      // });
+      // Upload to backend
+      const uploadedUrl = await uploadImage(compressedFile, (percent) => {
+        setProgress(percent);
+      });
+
+      // Replace preview with actual backend URL
+      URL.revokeObjectURL(previewUrl);
+      setPreview(uploadedUrl);
       
-      // Temporary mock implementation
-      setProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const mockUrl = previewUrl; // In real implementation, this would be the CDN URL
-      
-      return mockUrl;
+      return uploadedUrl;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Upload failed';
       setError(errorMsg);

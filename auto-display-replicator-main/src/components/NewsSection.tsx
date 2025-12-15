@@ -286,7 +286,7 @@ const NewsSection = () => {
                   <p className="text-responsive-sm text-muted-foreground mb-3 sm:mb-4">{newsTexts[index]?.description || article.description}</p>
                 )}
                 {index === 0 ? (
-                  <Link to="/huiles-auto">
+                  <Link to="/catalogue">
                     <Button 
                       variant="outline" 
                       size="sm" 

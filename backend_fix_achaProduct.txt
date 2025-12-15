@@ -1,0 +1,1731 @@
+================================================================================
+                    COMPLETE FIX FOR ACHAPRODUCT BACKEND
+                    PostgreSQL Reserved Keyword Issue
+================================================================================
+
+Generated: December 5, 2025
+Issue: Column name "references" is a PostgreSQL reserved keyword
+Solution: Rename to "product_references" in all files
+
+================================================================================
+1) FIX FOR POSTGRESQL ERROR - CORRECTED SQL
+================================================================================
+
+The column "references" cannot be used as-is in PostgreSQL because it's a 
+reserved keyword. Replace with "product_references".
+
+CORRECTED SQL:
+
+CREATE TABLE IF NOT EXISTS acha_products (
+  id SERIAL PRIMARY KEY,
+  sub_id TEXT UNIQUE NOT NULL,
+  name TEXT,
+  description TEXT,
+  price TEXT,
+  images TEXT[],
+  quantity INTEGER DEFAULT 0,
+  product_references TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+================================================================================
+2) NEW FULL MODEL — /backend/models/AchaProduct.js
+================================================================================
+
+REPLACE THE ENTIRE FILE WITH:
+
+/**
+ * AchaProduct Model
+ * Database operations for Acha page products
+ * Stores quantity, product_references, and other product-specific data
+ * 
+ * FIXED: Renamed "references" to "product_references" (PostgreSQL reserved keyword)
+ */
+
+const { pool } = require('../config/database');
+
+class AchaProduct {
+  /**
+   * Initialize the acha_products table if it doesn't exist
+   */
+  static async initTable() {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS acha_products (
+          id SERIAL PRIMARY KEY,
+          sub_id TEXT UNIQUE NOT NULL,
+          name TEXT,
+          description TEXT,
+          price TEXT,
+          images TEXT[],
+          quantity INTEGER DEFAULT 0,
+          product_references TEXT[] DEFAULT '{}',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      console.log('✅ acha_products table ready');
+      return true;
+    } catch (error) {
+      console.error('❌ Error creating acha_products table:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Check if table exists
+   */
+  static async tableExists() {
+    try {
+      const result = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'acha_products'
+        )
+      `);
+      return result.rows[0].exists;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Ensure table exists before any operation
+   */
+  static async ensureTable() {
+    const exists = await this.tableExists();
+    if (!exists) {
+      await this.initTable();
+    }
+  }
+
+  /**
+   * Find all acha products
+   */
+  static async findAll() {
+    try {
+      await this.ensureTable();
+      const result = await pool.query(
+        'SELECT * FROM acha_products ORDER BY created_at DESC'
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('❌ Error in findAll:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Find by ID
+   */
+  static async findById(id) {
+    try {
+      await this.ensureTable();
+      const result = await pool.query(
+        'SELECT * FROM acha_products WHERE id = $1',
+        [id]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error in findById:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Find by sub_id (product identifier from URL)
+   */
+  static async findBySubId(subId) {
+    try {
+      await this.ensureTable();
+      const result = await pool.query(
+        'SELECT * FROM acha_products WHERE sub_id = $1',
+        [subId]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error in findBySubId:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get or create a product by sub_id
+   * If product doesn't exist, create it with default values
+   */
+  static async getOrCreate(subId) {
+    try {
+      await this.ensureTable();
+      
+      // First try to find existing product
+      let product = await this.findBySubId(subId);
+      
+      if (!product) {
+        // Create new product with default values
+        const result = await pool.query(
+          `INSERT INTO acha_products (sub_id, name, description, price, images, quantity, product_references)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [
+            subId,
+            decodeURIComponent(subId),
+            'Description du produit (modifiable par l\'administrateur).',
+            '0.000',
+            [],
+            0,
+            []
+          ]
+        );
+        product = result.rows[0];
+        console.log('✅ Created new acha_product for sub_id:', subId);
+      }
+      
+      return product;
+    } catch (error) {
+      console.error('❌ Error in getOrCreate:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new acha product
+   */
+  static async create(productData) {
+    await this.ensureTable();
+    const {
+      sub_id,
+      name,
+      description,
+      price,
+      images,
+      quantity,
+      product_references
+    } = productData;
+
+    const result = await pool.query(
+      `INSERT INTO acha_products (sub_id, name, description, price, images, quantity, product_references)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        sub_id,
+        name || '',
+        description || '',
+        price || '0.000',
+        images || [],
+        quantity || 0,
+        product_references || []
+      ]
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Update an acha product
+   */
+  static async update(id, productData) {
+    await this.ensureTable();
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    const fields = ['name', 'description', 'price', 'images', 'quantity', 'product_references'];
+
+    fields.forEach(field => {
+      if (productData[field] !== undefined) {
+        updates.push(`${field} = $${paramCount++}`);
+        values.push(productData[field]);
+      }
+    });
+
+    if (updates.length === 0) {
+      return await this.findById(id);
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+
+    const query = `UPDATE acha_products SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const result = await pool.query(query, values);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Delete an acha product
+   */
+  static async delete(id) {
+    try {
+      await this.ensureTable();
+      const result = await pool.query(
+        'DELETE FROM acha_products WHERE id = $1 RETURNING *',
+        [id]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error in delete:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Decrease quantity by 1 (for vente hors ligne)
+   */
+  static async decreaseQuantity(id) {
+    try {
+      await this.ensureTable();
+      const result = await pool.query(
+        `UPDATE acha_products 
+         SET quantity = GREATEST(0, quantity - 1), updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $1 
+         RETURNING *`,
+        [id]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error in decreaseQuantity:', error.message);
+      return null;
+    }
+  }
+}
+
+module.exports = AchaProduct;
+
+================================================================================
+3) NEW FULL CONTROLLER — /backend/controllers/achaProductController.js
+================================================================================
+
+REPLACE THE ENTIRE FILE WITH:
+
+/**
+ * AchaProduct Controller
+ * Handles Acha product CRUD operations including quantity and product_references
+ * 
+ * FIXED: Uses "product_references" instead of "references"
+ */
+
+const AchaProduct = require('../models/AchaProduct');
+
+class AchaProductController {
+  /**
+   * Get all acha products
+   */
+  static async getAll(req, res) {
+    try {
+      const products = await AchaProduct.findAll();
+      
+      res.status(200).json({
+        success: true,
+        count: products.length,
+        data: products
+      });
+    } catch (error) {
+      console.error('❌ Error in getAll:', error.message);
+      res.status(200).json({
+        success: true,
+        count: 0,
+        data: []
+      });
+    }
+  }
+
+  /**
+   * Get acha product by ID
+   */
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid product ID is required'
+        });
+      }
+      
+      const product = await AchaProduct.findById(id);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: product
+      });
+    } catch (error) {
+      console.error('❌ Error in getById:', error.message);
+      res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
+    }
+  }
+
+  /**
+   * Get or create acha product by sub_id
+   * Used when loading the Acha page for a specific product
+   */
+  static async getOrCreate(req, res) {
+    try {
+      const { subId } = req.params;
+      
+      if (!subId) {
+        return res.status(400).json({
+          success: false,
+          error: 'subId is required'
+        });
+      }
+      
+      const product = await AchaProduct.getOrCreate(subId);
+      
+      res.status(200).json({
+        success: true,
+        data: product
+      });
+    } catch (error) {
+      console.error('❌ Error in getOrCreate:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get or create product'
+      });
+    }
+  }
+
+  /**
+   * Create a new acha product
+   */
+  static async create(req, res) {
+    try {
+      const {
+        sub_id,
+        name,
+        description,
+        price,
+        images,
+        quantity,
+        product_references
+      } = req.body;
+      
+      if (!sub_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'sub_id is required'
+        });
+      }
+      
+      // Check if sub_id already exists
+      const existing = await AchaProduct.findBySubId(sub_id);
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          error: 'Product with this sub_id already exists'
+        });
+      }
+      
+      const product = await AchaProduct.create({
+        sub_id,
+        name,
+        description,
+        price,
+        images,
+        quantity,
+        product_references
+      });
+      
+      res.status(201).json({
+        success: true,
+        message: 'Product created successfully',
+        data: product
+      });
+    } catch (error) {
+      console.error('❌ Error in create:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create product'
+      });
+    }
+  }
+
+  /**
+   * Update an acha product
+   */
+  static async update(req, res) {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid product ID is required'
+        });
+      }
+      
+      // Check if product exists
+      const productExists = await AchaProduct.findById(id);
+      if (!productExists) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+      
+      const product = await AchaProduct.update(id, updateData);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Product updated successfully',
+        data: product
+      });
+    } catch (error) {
+      console.error('❌ Error in update:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update product'
+      });
+    }
+  }
+
+  /**
+   * Decrease quantity (vente hors ligne)
+   */
+  static async venteHorsLigne(req, res) {
+    try {
+      const { id } = req.params;
+      
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid product ID is required'
+        });
+      }
+      
+      // Check if product exists and has quantity > 0
+      const productExists = await AchaProduct.findById(id);
+      if (!productExists) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+      
+      if (productExists.quantity <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Quantity is already 0'
+        });
+      }
+      
+      const product = await AchaProduct.decreaseQuantity(id);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Quantity decreased successfully',
+        data: product
+      });
+    } catch (error) {
+      console.error('❌ Error in venteHorsLigne:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to decrease quantity'
+      });
+    }
+  }
+
+  /**
+   * Delete an acha product
+   */
+  static async delete(req, res) {
+    try {
+      const { id } = req.params;
+      
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid product ID is required'
+        });
+      }
+      
+      const product = await AchaProduct.delete(id);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        message: 'Product deleted successfully',
+        data: {
+          id: product.id,
+          sub_id: product.sub_id
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error in delete:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete product'
+      });
+    }
+  }
+}
+
+module.exports = AchaProductController;
+
+================================================================================
+4) UPDATED ROUTES — /backend/routes/achaProducts.js
+================================================================================
+
+REPLACE THE ENTIRE FILE WITH:
+
+/**
+ * AchaProduct Routes
+ * Acha product CRUD endpoints including quantity and product_references management
+ */
+
+const express = require('express');
+const router = express.Router();
+const AchaProductController = require('../controllers/achaProductController');
+const asyncHandler = require('../middlewares/asyncHandler');
+
+// GET /api/acha-products - Get all acha products
+router.get('/', asyncHandler(AchaProductController.getAll));
+
+// GET /api/acha-products/sub/:subId - Get or create acha product by sub_id
+router.get('/sub/:subId', asyncHandler(AchaProductController.getOrCreate));
+
+// GET /api/acha-products/:id - Get acha product by ID
+router.get('/:id', asyncHandler(AchaProductController.getById));
+
+// POST /api/acha-products - Create new acha product
+router.post('/', asyncHandler(AchaProductController.create));
+
+// PUT /api/acha-products/:id - Update acha product (quantity, product_references, etc.)
+router.put('/:id', asyncHandler(AchaProductController.update));
+
+// POST /api/acha-products/:id/vente-hors-ligne - Decrease quantity by 1
+router.post('/:id/vente-hors-ligne', asyncHandler(AchaProductController.venteHorsLigne));
+
+// DELETE /api/acha-products/:id - Delete acha product
+router.delete('/:id', asyncHandler(AchaProductController.delete));
+
+module.exports = router;
+
+================================================================================
+5) FRONTEND FIX — ADD TO /auto-display-replicator-main/src/api/database.ts
+================================================================================
+
+FIND AND REPLACE the AchaProduct section (near the end of the file) WITH:
+
+// ==========================================
+// ACHA PRODUCTS API - For Acha Page
+// ==========================================
+
+export interface AchaProductData {
+  id?: number;
+  sub_id: string;
+  name?: string;
+  description?: string;
+  price?: string;
+  images?: string[];
+  quantity?: number;
+  product_references?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Get or create an Acha product by sub_id
+ */
+export const getOrCreateAchaProduct = async (subId: string): Promise<AchaProductData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products/sub/${encodeURIComponent(subId)}`, {
+      cache: 'no-store',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get or create acha product: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Invalid API response');
+    }
+    
+    console.log('✅ Acha product loaded:', result.data.sub_id);
+    return result.data;
+  } catch (error) {
+    console.error('❌ Error getting/creating acha product:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get an Acha product by ID
+ */
+export const getAchaProduct = async (id: number): Promise<AchaProductData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products/${id}`, {
+      cache: 'no-store',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get acha product: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Invalid API response');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('❌ Error getting acha product:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new Acha product
+ */
+export const createAchaProduct = async (data: Omit<AchaProductData, 'id' | 'created_at' | 'updated_at'>): Promise<AchaProductData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to create acha product: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Invalid API response');
+    }
+    
+    console.log('✅ Acha product created:', result.data.sub_id);
+    return result.data;
+  } catch (error) {
+    console.error('❌ Error creating acha product:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an Acha product
+ */
+export const updateAchaProduct = async (id: number, data: Partial<AchaProductData>): Promise<AchaProductData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to update acha product: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Invalid API response');
+    }
+    
+    console.log('✅ Acha product updated');
+    return result.data;
+  } catch (error) {
+    console.error('❌ Error updating acha product:', error);
+    throw error;
+  }
+};
+
+/**
+ * Perform vente hors ligne (decrease quantity by 1)
+ */
+export const venteHorsLigneAchaProduct = async (id: number): Promise<AchaProductData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products/${id}/vente-hors-ligne`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to perform vente hors ligne: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Invalid API response');
+    }
+    
+    console.log('✅ Vente hors ligne successful, new quantity:', result.data.quantity);
+    return result.data;
+  } catch (error) {
+    console.error('❌ Error performing vente hors ligne:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an Acha product
+ */
+export const deleteAchaProduct = async (id: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acha-products/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to delete acha product: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete acha product');
+    }
+    
+    console.log('✅ Acha product deleted');
+    return true;
+  } catch (error) {
+    console.error('❌ Error deleting acha product:', error);
+    throw error;
+  }
+};
+
+================================================================================
+6) ADMIN FEATURES FOR Acha.tsx — COMPLETE IMPLEMENTATION
+================================================================================
+
+REPLACE THE ENTIRE FILE /auto-display-replicator-main/src/pages/Acha.tsx WITH:
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  getOrCreateAchaProduct, 
+  updateAchaProduct, 
+  venteHorsLigneAchaProduct,
+  AchaProductData 
+} from "@/api/database";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Upload, 
+  X, 
+  Edit3, 
+  Save, 
+  ShoppingCart,
+  Zap,
+  ImagePlus,
+  Trash2,
+  Plus,
+  Package,
+  MinusCircle,
+  Tag
+} from "lucide-react";
+
+interface ProductData {
+  images: string[];
+  description: string;
+  price: string;
+}
+
+const Acha = () => {
+  const { subId } = useParams();
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const { toast } = useToast();
+  
+  // Product data from database
+  const [product, setProduct] = useState<AchaProductData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Local product data state (for images, description, price)
+  const [productData, setProductData] = useState<ProductData>({
+    images: [],
+    description: "Description du produit (modifiable par l'administrateur). Connectez-vous en tant qu'admin pour éditer ce contenu.",
+    price: "0.000"
+  });
+  
+  // Image gallery state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState(false);
+  
+  // Admin editing states
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [tempDescription, setTempDescription] = useState("");
+  const [tempPrice, setTempPrice] = useState("");
+  
+  // Admin-only states
+  const [newReference, setNewReference] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Touch gesture refs
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  
+  // Load product data from database on mount
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!subId) return;
+      
+      setIsLoading(true);
+      try {
+        const productFromDb = await getOrCreateAchaProduct(subId);
+        setProduct(productFromDb);
+        
+        // Update local state with database values
+        setProductData({
+          images: productFromDb.images || [],
+          description: productFromDb.description || "Description du produit (modifiable par l'administrateur).",
+          price: productFromDb.price || "0.000"
+        });
+        
+        console.log('✅ Product loaded from database:', productFromDb);
+      } catch (error) {
+        console.error('❌ Error loading product:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger le produit",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProduct();
+  }, [subId, toast]);
+  
+  // Save field to database
+  const saveFieldToDatabase = async (fieldName: string, value: unknown) => {
+    if (!product?.id) return;
+    
+    setIsSaving(true);
+    const previousProduct = { ...product };
+    
+    try {
+      const updatedProduct = await updateAchaProduct(product.id, { [fieldName]: value });
+      setProduct(updatedProduct);
+      
+      toast({
+        title: "Succès",
+        description: "Modification enregistrée",
+      });
+    } catch (error) {
+      console.error('❌ Error saving to database:', error);
+      // Revert UI change
+      setProduct(previousProduct);
+      
+      toast({
+        title: "Erreur",
+        description: "Échec de la sauvegarde. Modification annulée.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Handle quantity change (admin only)
+  const handleQuantityChange = async (newQuantity: number) => {
+    if (!isAdmin || !product?.id) return;
+    
+    const quantity = Math.max(0, newQuantity);
+    
+    // Optimistic update
+    setProduct(prev => prev ? { ...prev, quantity } : null);
+    
+    await saveFieldToDatabase('quantity', quantity);
+  };
+  
+  // Handle vente hors ligne (admin only)
+  const handleVenteHorsLigne = async () => {
+    if (!isAdmin || !product?.id || (product.quantity || 0) <= 0) return;
+    
+    setIsSaving(true);
+    const previousQuantity = product.quantity;
+    
+    // Optimistic update
+    setProduct(prev => prev ? { ...prev, quantity: Math.max(0, (prev.quantity || 0) - 1) } : null);
+    
+    try {
+      const updatedProduct = await venteHorsLigneAchaProduct(product.id);
+      setProduct(updatedProduct);
+      
+      toast({
+        title: "Vente hors ligne",
+        description: `Quantité mise à jour: ${updatedProduct.quantity}`,
+      });
+    } catch (error) {
+      console.error('❌ Error performing vente hors ligne:', error);
+      // Revert UI change
+      setProduct(prev => prev ? { ...prev, quantity: previousQuantity } : null);
+      
+      toast({
+        title: "Erreur",
+        description: "Échec de la vente hors ligne",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Handle add reference (admin only)
+  const handleAddReference = async () => {
+    if (!isAdmin || !product?.id || !newReference.trim()) return;
+    
+    const currentRefs = product.product_references || [];
+    const updatedRefs = [...currentRefs, newReference.trim()];
+    
+    // Optimistic update
+    setProduct(prev => prev ? { ...prev, product_references: updatedRefs } : null);
+    setNewReference("");
+    
+    await saveFieldToDatabase('product_references', updatedRefs);
+  };
+  
+  // Handle remove reference (admin only)
+  const handleRemoveReference = async (refToRemove: string) => {
+    if (!isAdmin || !product?.id) return;
+    
+    const currentRefs = product.product_references || [];
+    const updatedRefs = currentRefs.filter(ref => ref !== refToRemove);
+    
+    // Optimistic update
+    setProduct(prev => prev ? { ...prev, product_references: updatedRefs } : null);
+    
+    await saveFieldToDatabase('product_references', updatedRefs);
+  };
+  
+  // Image navigation handlers
+  const handleNextImage = useCallback(() => {
+    if (productData.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % productData.images.length);
+    }
+  }, [productData.images.length]);
+  
+  const handlePrevImage = useCallback(() => {
+    if (productData.images.length > 0) {
+      setCurrentImageIndex((prev) => 
+        (prev - 1 + productData.images.length) % productData.images.length
+      );
+    }
+  }, [productData.images.length]);
+  
+  const handleDotClick = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+  
+  // Touch gesture handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    
+    if (isLeftSwipe && productData.images.length > 1) {
+      handleNextImage();
+    }
+    if (isRightSwipe && productData.images.length > 1) {
+      handlePrevImage();
+    }
+  };
+  
+  // Keyboard navigation for images
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (productData.images.length > 1) {
+        if (e.key === 'ArrowLeft') handlePrevImage();
+        if (e.key === 'ArrowRight') handleNextImage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [handleNextImage, handlePrevImage, productData.images.length]);
+  
+  // Admin: Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !product?.id) return;
+    
+    const remainingSlots = 5 - productData.images.length;
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    
+    const newImages: string[] = [];
+    
+    for (const file of filesToProcess) {
+      const reader = new FileReader();
+      await new Promise<void>((resolve) => {
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          newImages.push(base64);
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    const updatedImages = [...productData.images, ...newImages];
+    setProductData(prev => ({ ...prev, images: updatedImages }));
+    
+    // Save to database
+    await saveFieldToDatabase('images', updatedImages);
+    
+    // Reset input
+    e.target.value = '';
+  };
+  
+  // Admin: Delete image
+  const handleDeleteImage = async (index: number) => {
+    if (!product?.id) return;
+    
+    const newImages = productData.images.filter((_, i) => i !== index);
+    setProductData(prev => ({ ...prev, images: newImages }));
+    
+    if (currentImageIndex >= newImages.length && newImages.length > 0) {
+      setCurrentImageIndex(newImages.length - 1);
+    } else if (newImages.length === 0) {
+      setCurrentImageIndex(0);
+    }
+    
+    // Save to database
+    await saveFieldToDatabase('images', newImages);
+  };
+  
+  // Admin: Save description
+  const handleSaveDescription = async () => {
+    if (!product?.id) return;
+    
+    setProductData(prev => ({ ...prev, description: tempDescription }));
+    setIsEditingDescription(false);
+    
+    // Save to database
+    await saveFieldToDatabase('description', tempDescription);
+  };
+  
+  // Admin: Save price
+  const handleSavePrice = async () => {
+    if (!product?.id) return;
+    
+    setProductData(prev => ({ ...prev, price: tempPrice }));
+    setIsEditingPrice(false);
+    
+    // Save to database
+    await saveFieldToDatabase('price', tempPrice);
+  };
+  
+  // Start editing description
+  const startEditingDescription = () => {
+    setTempDescription(productData.description);
+    setIsEditingDescription(true);
+  };
+  
+  // Start editing price
+  const startEditingPrice = () => {
+    setTempPrice(productData.price);
+    setIsEditingPrice(true);
+  };
+  
+  // Action handlers
+  const handleAddToCart = () => {
+    console.log("Adding to cart:", subId);
+    toast({
+      title: "Panier",
+      description: "Produit ajouté au panier!",
+    });
+  };
+  
+  const handleOrder = () => {
+    navigate('/cart');
+  };
+  
+  const productTitle = decodeURIComponent(subId || "Produit");
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+        <Header />
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+      <Header />
+      
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {/* Breadcrumb */}
+        <nav className="mb-6 text-sm text-gray-500 flex items-center gap-2">
+          <a href="/" className="hover:text-orange-500 transition-colors">Accueil</a>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">{productTitle}</span>
+        </nav>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* ========== IMAGE GALLERY SECTION ========== */}
+          <section className="space-y-4">
+            {/* Main Image Container */}
+            <div 
+              className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl overflow-hidden shadow-lg group"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {productData.images.length > 0 ? (
+                <>
+                  {/* Current Image */}
+                  <div className="relative w-full h-full">
+                    {productData.images.map((image, index) => (
+                      <div
+                        key={index}
+                        className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+                          index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`${productTitle} - Image ${index + 1}`}
+                          className="w-full h-full object-contain p-4"
+                          loading={index === 0 ? "eager" : "lazy"}
+                        />
+                        
+                        {/* Admin: Delete button on each image */}
+                        {isAdmin && index === currentImageIndex && (
+                          <button
+                            onClick={() => handleDeleteImage(index)}
+                            className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-all z-20"
+                            title="Supprimer cette image"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Navigation Arrows */}
+                  {productData.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrevImage}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 sm:p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-10 shadow-xl"
+                        aria-label="Image précédente"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={handleNextImage}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 sm:p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-10 shadow-xl"
+                        aria-label="Image suivante"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Dot Indicators */}
+                  {productData.images.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                      {productData.images.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleDotClick(index)}
+                          className={`rounded-full transition-all duration-300 ${
+                            index === currentImageIndex
+                              ? 'bg-orange-500 w-8 h-3 shadow-lg'
+                              : 'bg-white/70 hover:bg-white w-3 h-3'
+                          }`}
+                          aria-label={`Aller à l'image ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Image Counter */}
+                  <div className="absolute top-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded-lg">
+                    {currentImageIndex + 1} / {productData.images.length}
+                  </div>
+                </>
+              ) : (
+                /* Placeholder when no images */
+                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                  <ImagePlus className="w-16 h-16 mb-4 opacity-50" />
+                  <p className="text-sm">Aucune image disponible</p>
+                  {isAdmin && (
+                    <p className="text-xs mt-2 text-orange-500">Cliquez ci-dessous pour ajouter des images</p>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Thumbnail Navigation */}
+            {productData.images.length > 1 && (
+              <div className="flex gap-2 justify-center overflow-x-auto pb-2">
+                {productData.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleDotClick(index)}
+                    className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      index === currentImageIndex
+                        ? 'border-orange-500 ring-2 ring-orange-200 scale-105'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`Miniature ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Admin: Image Upload Section */}
+            {isAdmin && productData.images.length < 5 && (
+              <div className="bg-orange-50 border-2 border-dashed border-orange-300 rounded-xl p-4 text-center">
+                <label className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-orange-500" />
+                  <span className="text-sm font-medium text-orange-600">
+                    Ajouter des images ({productData.images.length}/5)
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    Cliquez pour télécharger (max 5 images)
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+          </section>
+          
+          {/* ========== PRODUCT INFO SECTION ========== */}
+          <section className="space-y-6">
+            {/* Product Title */}
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                {productTitle}
+              </h1>
+              <div className="w-20 h-1 bg-gradient-to-r from-orange-500 to-orange-300 rounded-full" />
+            </div>
+            
+            {/* ========== ADMIN-ONLY SECTION ========== */}
+            {isAdmin && product && (
+              <div className="space-y-4">
+                {/* A) Quantité du produit & B) Vente Hors Ligne */}
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="w-5 h-5 text-purple-600" />
+                    <h3 className="font-semibold text-purple-800">Quantité du produit</h3>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={product.quantity || 0}
+                        onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)}
+                        className="w-24 text-center font-bold text-lg"
+                        disabled={isSaving}
+                      />
+                      <span className="text-gray-600 text-sm">unités</span>
+                    </div>
+                    
+                    <Button
+                      onClick={handleVenteHorsLigne}
+                      disabled={(product.quantity || 0) <= 0 || isSaving}
+                      className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                    >
+                      <MinusCircle className="w-4 h-4" />
+                      Vente hors ligne
+                    </Button>
+                  </div>
+                  
+                  {(product.quantity || 0) <= 0 && (
+                    <p className="text-sm text-red-500 mt-2">Stock épuisé</p>
+                  )}
+                </div>
+                
+                {/* C) Références Section */}
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-800">Références</h3>
+                  </div>
+                  
+                  {/* Current References */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(product.product_references || []).length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">Aucune référence</p>
+                    ) : (
+                      (product.product_references || []).map((ref, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 bg-white border border-green-300 rounded-lg px-3 py-1.5 text-sm"
+                        >
+                          <span className="font-medium text-green-800">{ref}</span>
+                          <button
+                            onClick={() => handleRemoveReference(ref)}
+                            className="text-red-500 hover:text-red-700 ml-1"
+                            disabled={isSaving}
+                            title="Supprimer cette référence"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Add New Reference */}
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Nouvelle référence (ex: REF-001)"
+                      value={newReference}
+                      onChange={(e) => setNewReference(e.target.value)}
+                      className="flex-1"
+                      disabled={isSaving}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddReference();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleAddReference}
+                      disabled={!newReference.trim() || isSaving}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Description Block */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <h3 className="font-semibold text-lg text-gray-800">DESCRIPTION</h3>
+                {isAdmin && !isEditingDescription && (
+                  <button
+                    onClick={startEditingDescription}
+                    className="flex items-center gap-1.5 text-orange-500 hover:text-orange-600 text-sm font-medium transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Modifier
+                  </button>
+                )}
+              </div>
+              <div className="p-4">
+                {isEditingDescription ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={tempDescription}
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      className="min-h-[120px] resize-none"
+                      placeholder="Entrez la description du produit..."
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingDescription(false)}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Annuler
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveDescription}
+                        className="bg-orange-500 hover:bg-orange-600"
+                        disabled={isSaving}
+                      >
+                        <Save className="w-4 h-4 mr-1" />
+                        Sauvegarder
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                    {productData.description}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Price Block */}
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl border-2 border-orange-200 p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-lg text-gray-800">Prix</h3>
+                {isAdmin && !isEditingPrice && (
+                  <button
+                    onClick={startEditingPrice}
+                    className="flex items-center gap-1.5 text-orange-500 hover:text-orange-600 text-sm font-medium transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Modifier
+                  </button>
+                )}
+              </div>
+              
+              {isEditingPrice ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={tempPrice}
+                      onChange={(e) => setTempPrice(e.target.value)}
+                      className="text-2xl font-bold max-w-[200px]"
+                      placeholder="0.000"
+                    />
+                    <span className="text-xl font-bold text-gray-700">DT</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingPrice(false)}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Annuler
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSavePrice}
+                      className="bg-orange-500 hover:bg-orange-600"
+                      disabled={isSaving}
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      Sauvegarder
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-3xl sm:text-4xl font-bold text-orange-600">
+                  {productData.price} <span className="text-xl text-gray-700">DT</span>
+                </p>
+              )}
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={handleAddToCart}
+                className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-6 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl"
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Ajouter au panier
+              </Button>
+              
+              <Button
+                onClick={handleOrder}
+                className="flex-1 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white py-6 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl"
+              >
+                <Zap className="w-5 h-5 mr-2" />
+                Commander
+              </Button>
+            </div>
+            
+            {/* Admin Info Badge */}
+            {isAdmin && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-500 text-white p-2 rounded-lg">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-800 text-sm">Mode Administrateur</h4>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Vous pouvez modifier les images, la description, le prix, la quantité et les références de ce produit.
+                      Les modifications sont sauvegardées automatiquement dans la base de données.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Acha;
+
+================================================================================
+7) FINAL CHECKLIST — STEPS TO APPLY THE FIX
+================================================================================
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+EXACT FILES TO REPLACE
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+1. BACKEND MODEL:
+   File: /backend/models/AchaProduct.js
+   Action: REPLACE entire file with Section 2 above
+
+2. BACKEND CONTROLLER:
+   File: /backend/controllers/achaProductController.js
+   Action: REPLACE entire file with Section 3 above
+
+3. BACKEND ROUTES:
+   File: /backend/routes/achaProducts.js
+   Action: REPLACE entire file with Section 4 above
+
+4. FRONTEND API:
+   File: /auto-display-replicator-main/src/api/database.ts
+   Action: FIND the AchaProduct section and REPLACE with Section 5 above
+
+5. FRONTEND PAGE:
+   File: /auto-display-replicator-main/src/pages/Acha.tsx
+   Action: REPLACE entire file with Section 6 above
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+EXACT STEPS TO RESTART BACKEND
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+Step 1: Stop the backend server (Ctrl+C in terminal)
+
+Step 2: Drop the broken table (if it exists partially) by running in PostgreSQL:
+        
+        DROP TABLE IF EXISTS acha_products;
+
+Step 3: Navigate to backend folder:
+        
+        cd C:\Users\PC\Desktop\newprej\backend
+
+Step 4: Start the backend server:
+        
+        npm run dev
+
+Step 5: Verify table creation in terminal output:
+        Look for: "✅ acha_products table ready"
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+EXACT STEPS TO TEST THE FIX
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+TEST 1: Check API Health
+        Open browser: http://localhost:3000/health
+        Expected: {"success":true,"data":{"status":"ok",...}}
+
+TEST 2: Test getOrCreate endpoint
+        Open browser: http://localhost:3000/api/acha-products/sub/TestProduct
+        Expected: {"success":true,"data":{"id":1,"sub_id":"TestProduct",...}}
+
+TEST 3: Test update endpoint (using curl or Postman)
+        
+        curl -X PUT http://localhost:3000/api/acha-products/1 \
+          -H "Content-Type: application/json" \
+          -d '{"quantity": 10, "product_references": ["REF-001", "REF-002"]}'
+        
+        Expected: {"success":true,"message":"Product updated successfully","data":{...}}
+
+TEST 4: Test vente hors ligne
+        
+        curl -X POST http://localhost:3000/api/acha-products/1/vente-hors-ligne \
+          -H "Content-Type: application/json"
+        
+        Expected: {"success":true,"message":"Quantity decreased successfully","data":{"quantity":9,...}}
+
+TEST 5: Test frontend (as Admin)
+        1. Start frontend: cd auto-display-replicator-main && npm run dev
+        2. Login as admin
+        3. Navigate to any Acha product page
+        4. Verify:
+           - Quantity input is visible
+           - "Vente hors ligne" button works
+           - References section allows add/remove
+           - All changes persist after page refresh
+
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+POSTGRESQL COMMANDS (Optional - for manual verification)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+Connect to PostgreSQL:
+psql -U your_username -d testdb
+
+Check if table exists:
+\dt acha_products
+
+View table structure:
+\d acha_products
+
+View all records:
+SELECT * FROM acha_products;
+
+Manual table creation (if needed):
+CREATE TABLE IF NOT EXISTS acha_products (
+  id SERIAL PRIMARY KEY,
+  sub_id TEXT UNIQUE NOT NULL,
+  name TEXT,
+  description TEXT,
+  price TEXT,
+  images TEXT[],
+  quantity INTEGER DEFAULT 0,
+  product_references TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+================================================================================
+END OF FIX FILE
+================================================================================
+

@@ -1,11 +1,17 @@
-import React from "react";
-import { Search, ChevronDown, ChevronUp, Heart, ShoppingCart, User, Menu, X, MessageCircle, Settings, Disc, Filter, Lock, Snowflake, Zap, Fuel, Shield, Car, ThermometerSnowflake, Wind, Wrench, Lightbulb, FileText, Eye, Gauge, Compass, Link2, Sparkles, Droplets, AirVent, Wind as WindIcon, Circle, Activity, Sparkles as SparkPlug, Battery, Cog as Engine, Feather, Wrench as Wrench2, DoorOpen, Thermometer, Cog, Fan, Minus, Hammer, Sun, Circle as Generic, Fuel as FuelPump, Thermometer as Heat, Navigation, Cog as Maintenance, CreditCard, Truck, Globe, RotateCcw, Tag, PenTool, Mail, Star, Wrench as WrenchIcon, Wind as Wiper, Wind as WindshieldWiper, Cog as CogIcon, Gauge as GaugeIcon, Sparkles as SparkPlugIcon, Minus as ExhaustIcon, Car as CarIcon, Zap as ZapIcon, Cog as CogIcon2, Battery as BatteryIcon, Fuel as FuelIcon, Cog as CogIcon3, Settings as SettingsIcon, Wind as WindIcon2, Lightbulb as LightbulbIcon, Fan as FanIcon, Snowflake as SnowflakeIcon, Cog as CogIcon4, Zap as ZapIcon2, Wrench as WrenchIcon2, DoorOpen as DoorOpenIcon, Wrench as WrenchIcon3, Car as CarIcon2, Droplets as DropletsIcon, Sparkles as SparklesIcon, Car as CarIcon3, Wrench as WrenchIcon4, Lightbulb as LightbulbIcon2, Clock, LogOut, Home, ArrowRight, Facebook, Instagram, Phone, Info, ClipboardList } from "lucide-react";
+﻿import React from "react";
+import { Search, ChevronDown, ChevronUp, Heart, ShoppingCart, User, Menu, X, MessageCircle, Settings, Disc, Filter, Lock, Snowflake, Zap, Fuel, Shield, Car, ThermometerSnowflake, Wind, Wrench, Lightbulb, FileText, Eye, Gauge, Compass, Link2, Sparkles, Droplets, AirVent, Wind as WindIcon, Circle, Activity, Sparkles as SparkPlug, Battery, Cog as Engine, Feather, Wrench as Wrench2, DoorOpen, Thermometer, Cog, Fan, Minus, Hammer, Sun, Circle as Generic, Fuel as FuelPump, Thermometer as Heat, Navigation, Cog as Maintenance, CreditCard, Truck, Globe, RotateCcw, Tag, PenTool, Mail, Star, Wrench as WrenchIcon, Wind as Wiper, Wind as WindshieldWiper, Cog as CogIcon, Gauge as GaugeIcon, Sparkles as SparkPlugIcon, Minus as ExhaustIcon, Car as CarIcon, Zap as ZapIcon, Cog as CogIcon2, Battery as BatteryIcon, Fuel as FuelIcon, Cog as CogIcon3, Settings as SettingsIcon, Wind as WindIcon2, Lightbulb as LightbulbIcon, Fan as FanIcon, Snowflake as SnowflakeIcon, Cog as CogIcon4, Zap as ZapIcon2, Wrench as WrenchIcon2, DoorOpen as DoorOpenIcon, Wrench as WrenchIcon3, Car as CarIcon2, Droplets as DropletsIcon, Sparkles as SparklesIcon, Car as CarIcon3, Wrench as WrenchIcon4, Lightbulb as LightbulbIcon2, Clock, LogOut, Home, ArrowRight, Facebook, Instagram, Phone, Info, ClipboardList, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { getSearchOptions, createSearchOption, deleteSearchOptionByValue } from "@/api/search";
 import SearchBar from "./Header/SearchBar";
+import MobileFamilleAccordion from "./home/MobileFamilleAccordion";
+import {
+  getSectionContent,
+  updateSectionContent,
+  type SectionContentData,
+} from "@/api/database";
 import {
   Sheet,
   SheetContent,
@@ -14,6 +20,13 @@ import {
   SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
+
+type FamilleItem = {
+  id: string;
+  title: string;
+  image: string;
+  subcategories: string[];
+};
 
 const Header = () => {
   const [user, setUser] = useState<any>(null);
@@ -99,6 +112,15 @@ const Header = () => {
   const [showSearchFields, setShowSearchFields] = useState(true);
   const [showMobileSearch, setShowMobileSearch] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Familles state for menu
+  const [menuFamilles, setMenuFamilles] = useState<FamilleItem[]>([]);
+  const [menuFamillesLoading, setMenuFamillesLoading] = useState(false);
+  const [expandedFamilleIndex, setExpandedFamilleIndex] = useState<number | null>(null);
+  
+  // Auto-hide header on mobile scroll
+  const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const [filtresDropdownOpen, setFiltresDropdownOpen] = useState(false);
   const [freinDropdownOpen, setFreinDropdownOpen] = useState(false);
   const [cartCount, setCartCount] = useState(3);
@@ -133,6 +155,67 @@ const Header = () => {
       }
     };
   }, []);
+
+  // Auto-hide header on mobile scroll (< 768px)
+  useEffect(() => {
+    const handleScroll = () => {
+      // Only apply on mobile screens (< 768px)
+      if (window.innerWidth >= 768) {
+        setIsMobileHeaderVisible(true);
+        return;
+      }
+
+      const currentScrollY = window.scrollY;
+      
+      // Scrolling DOWN → hide header
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        setIsMobileHeaderVisible(false);
+      }
+      // Scrolling UP → show header
+      else if (currentScrollY < lastScrollY.current) {
+        setIsMobileHeaderVisible(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Load familles data when menu opens
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const loadFamilles = async () => {
+      try {
+        setMenuFamillesLoading(true);
+        const section = await getSectionContent("famille_categories");
+
+        if (section && section.content) {
+          const content =
+            typeof section.content === "string"
+              ? JSON.parse(section.content)
+              : section.content;
+
+          if (Array.isArray(content) && content.length > 0) {
+            setMenuFamilles(content as FamilleItem[]);
+          } else {
+            setMenuFamilles([]);
+          }
+        } else {
+          setMenuFamilles([]);
+        }
+      } catch (error) {
+        console.error("Error loading famille_categories for menu:", error);
+        setMenuFamilles([]);
+      } finally {
+        setMenuFamillesLoading(false);
+      }
+    };
+
+    loadFamilles();
+  }, [menuOpen]);
   
   // State for Frein section editing
   const [freinFilterNames, setFreinFilterNames] = useState({
@@ -919,24 +1002,30 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadData = async () => {
       try {
         // Check if user is logged in
         const userData = localStorage.getItem('user');
-        if (userData) {
+        if (userData && isMounted) {
           const parsedUser = JSON.parse(userData);
-          console.log('👤 تم تحميل بيانات المستخدم:', parsedUser);
-          console.log('🔑 دور المستخدم:', parsedUser.role);
+          // Ensure user has role field
+          if (!parsedUser.role && parsedUser.is_admin !== undefined) {
+            parsedUser.role = parsedUser.is_admin ? 'admin' : 'user';
+          }
           setUser(parsedUser);
-        } else {
-          console.log('❌ لا يوجد مستخدم مسجل الدخول');
         }
+        
+        if (!isMounted) return;
         
         // Load saved filter names
         const savedFilterNames = localStorage.getItem('filterNames');
-        if (savedFilterNames) {
+        if (savedFilterNames && isMounted) {
           setFilterNames(JSON.parse(savedFilterNames));
         }
+        
+        if (!isMounted) return;
         
         // Load search options from database
         const [marquesData, modelesData, anneesData] = await Promise.all([
@@ -945,6 +1034,8 @@ const Header = () => {
           getSearchOptions('annee')
         ]);
 
+        if (!isMounted) return;
+
         const marques = marquesData.map(opt => opt.value);
         const modeles = modelesData.map(opt => opt.value);
         const annees = anneesData.map(opt => opt.value);
@@ -952,23 +1043,15 @@ const Header = () => {
         setSavedOptions({ marques, modeles, annees });
       } catch (error) {
         console.error('Error loading search options:', error);
-        // Fallback to localStorage
-        const savedSearchOptions = JSON.parse(localStorage.getItem('savedSearchOptions') || '[]');
-        if (savedSearchOptions.length > 0) {
-          const marques = [...new Set(savedSearchOptions.map((option: any) => option.marque).filter(Boolean))] as string[];
-          const modeles = [...new Set(savedSearchOptions.map((option: any) => option.modele).filter(Boolean))] as string[];
-          const annees = [...new Set(savedSearchOptions.map((option: any) => option.annee).filter(Boolean))] as string[];
-          
-          setSavedOptions(prev => ({
-            marques: [...prev.marques, ...marques],
-            modeles: [...prev.modeles, ...modeles],
-            annees: [...prev.annees, ...annees]
-          }));
-        }
+        // Don't fallback to localStorage - let it fail gracefully
       }
     };
 
     loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Listen for changes in localStorage to update user state
@@ -976,7 +1059,12 @@ const Header = () => {
     const handleStorageChange = () => {
       const userData = localStorage.getItem('user');
       if (userData) {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        // Ensure user has role field
+        if (!parsedUser.role && parsedUser.is_admin !== undefined) {
+          parsedUser.role = parsedUser.is_admin ? 'admin' : 'user';
+        }
+        setUser(parsedUser);
       } else {
         setUser(null);
       }
@@ -1788,17 +1876,28 @@ const Header = () => {
 
 
       {/* 📱 Mobile Header - للشاشات الصغيرة */}
-      <header className="lg:hidden w-full relative sticky top-0 z-40 luxury-glass-dark overflow-visible luxury-shadow-header" style={{ height: 'calc(100px + 1rem)' }}>
+      <header 
+        className={`lg:hidden w-full fixed top-0 left-0 right-0 z-40 luxury-glass-dark overflow-visible luxury-shadow-header transition-transform duration-300 ${
+          isMobileHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        }`} 
+        style={{ height: 'calc(100px + 1rem)' }}
+      >
         {/* Header Image */}
         <div className="relative h-48 flex flex-col items-center justify-start pt-0">
           <img 
             src="/ramm.png" 
             alt="RAM Logo" 
             className="max-w-[70%] max-h-[70%] md:max-w-[60%] md:max-h-[60%] lg:max-w-[50%] lg:max-h-[50%] xl:max-w-[45%] xl:max-h-[45%] object-contain -mt-8"
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                window.location.href = "/";
+              }
+            }}
             onError={(e) => {
               console.error('Error loading ramm.png:', e);
               const target = e.target as HTMLImageElement;
-              target.src = '/ram.png'; // fallback to ram.png
+              target.src = '/ram.png';
             }}
           />
         </div>
@@ -1815,8 +1914,8 @@ const Header = () => {
             <span className="text-[10px] md:text-xs lg:text-base xl:text-lg 2xl:text-xl text-orange-500 font-medium whitespace-nowrap">Menu</span>
           </div>
           
-          {/* ✅ زر إخفاء/إظهار خانة البحث - للشاشات الصغيرة والهواتف فقط */}
-          <div className="lg:hidden flex flex-col items-center cursor-pointer flex-1" onClick={() => setShowMobileSearch(!showMobileSearch)}>
+          {/* ✅ زر إخفاء/إظهار خانة البحث - للشاشات المتوسطة فقط (768px-1024px) - مخفي على الهواتف */}
+          <div className="hidden md:flex lg:hidden flex-col items-center cursor-pointer flex-1" onClick={() => setShowMobileSearch(!showMobileSearch)}>
             {showMobileSearch ? (
               <>
                 <ChevronUp className="w-6 h-6 md:w-7 md:h-7 text-orange-500 hover:scale-110 transition-transform cursor-pointer mb-1" />
@@ -1866,15 +1965,18 @@ const Header = () => {
 
       {/* ✅ حقل البحث للهواتف والشاشات الصغيرة فقط */}
       {showMobileSearch && (
-      <div className="lg:hidden w-full bg-white border-b border-gray-200 shadow-sm sticky top-[calc(100px+1rem)] z-30">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <SearchBar className="w-full" />
-            </div>
-                </div>
-                </div>
-              </div>
+      <div 
+        className={`md:hidden w-full bg-white border-b border-gray-200 shadow-sm sticky z-30 transition-transform duration-300 ${
+          isMobileHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}
+        style={{
+          top: 'calc(100px + 1rem)'
+        }}
+      >
+        <div className="w-full px-3 py-3">
+          <SearchBar className="w-full" />
+        </div>
+      </div>
       )}
 
       {/* القائمة الجانبية */}
@@ -1889,9 +1991,7 @@ const Header = () => {
           <SheetHeader className="pb-4 mb-8 relative lg:mb-12">
             <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
             <SheetDescription className="sr-only">Menu principal de navigation du site</SheetDescription>
-            {/* شعار الموقع */}
             <div className="flex justify-center mb-0 -mt-12 relative lg:-mt-16 xl:-mt-20 2xl:-mt-24">
-              {/* الخط البرتقالي فوق الشعار */}
               <div className="absolute top-20 lg:top-16 xl:top-12 2xl:top-8 left-0 w-full border-b-2 border-[#F97316]/40 z-10"></div>
               <img 
                 src="/ramm.png" 
@@ -1902,1324 +2002,37 @@ const Header = () => {
                   target.src = '/ram.png';
                 }}
               />
-              {/* User status with absolute positioning */}
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2 flex items-center gap-2 z-30 lg:translate-y-4">
-                <User className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316] flex-shrink-0" />
-                {user ? (
-                  <span className="text-sm lg:text-base text-gray-300 whitespace-nowrap font-medium">
-                    Welcome {user.name || user.username || 'Admin'} | 
-                    <span 
-                      onClick={handleLogout} 
-                      className="text-[#F97316] hover:text-[#ea580c] transition-colors cursor-pointer ml-1 font-semibold"
-                    >
-                      Log out
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-sm lg:text-base text-gray-300 whitespace-nowrap font-medium">
-                    Client visitant | 
-                    <Link to="/login" className="text-[#F97316] hover:text-[#ea580c] transition-colors ml-1 font-semibold">
-                      Login
-                    </Link>
-                  </span>
-                )}
-              </div>
             </div>
           </SheetHeader>
           
-          {/* Responsive layout: vertical on mobile, horizontal on desktop */}
-          <div className="space-y-2 lg:flex lg:flex-row lg:space-y-0 lg:gap-8 lg:overflow-x-auto lg:pb-6 lg:px-4">
-            {/* PIÈCES DÉTACHÉES Section */}
-            <div className="border-b lg:border-b-0 lg:border-r border-[#F97316]/30 pb-4 mb-4 lg:pb-0 lg:mb-0 lg:pr-8 lg:w-auto lg:flex-shrink-0 lg:min-w-[220px] transition-all duration-300 ease-in-out min-w-0">
-              <h3 className="text-[#F97316] font-bold text-lg lg:text-xl mb-4 lg:mb-6 flex items-center gap-3">
-                <Settings className="w-6 h-6 lg:w-7 lg:h-7" />
-                PIÈCES DÉTACHÉES
-              </h3>
-              
-              <div className="space-y-1">
-                {/* أيقونة إضافة فلتر جديد - للمديرين فقط - في القائمة الرئيسية */}
-                {user && (user.role === 'admin' || user.is_admin === true) && (
-                  <>
-                  <div className="px-4 py-2 border border-orange-200 rounded-lg bg-orange-25">
-                    {!showAddFilterForm ? (
-                      <button
-                        onClick={() => setShowAddFilterForm(true)}
-                        className="w-full flex items-center gap-3 py-3 px-3 hover:bg-orange-50 rounded-lg cursor-pointer group border-2 border-dashed border-orange-300 hover:border-orange-400 transition-all duration-200 bg-orange-50 shadow-md"
-                      >
-                        <div className="w-6 h-6 bg-orange-200 rounded flex items-center justify-center">
-                          <span className="text-orange-600 text-lg font-bold">➕</span>
-                        </div>
-                        <span className="text-sm text-orange-600 font-medium">add url</span>
-                        <div className="ml-auto text-xs text-orange-500 bg-orange-100 px-2 py-1 rounded">Admin</div>
-                      </button>
-                    ) : (
-                      <div className="space-y-3 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={newFilterData.name}
-                            onChange={(e) => setNewFilterData({...newFilterData, name: e.target.value})}
-                            placeholder="Name url"
-                            className="flex-1 px-3 py-2 text-sm text-black border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-                          />
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <label className="flex-1 px-3 py-2 text-sm border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 cursor-pointer bg-white hover:bg-orange-50 transition-colors">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFilterImageUpload}
-                              className="hidden"
-                            />
-                                  <span className="text-gray-600">
-                                    {selectedFilterImage ? 'Image selected' : 'Add Photo'}
-                                  </span>
-                          </label>
-                        </div>
-                        
-                        {/* معاينة الصورة */}
-                        {filterImagePreview && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-12 h-12 border border-orange-300 rounded overflow-hidden">
-                              <img
-                                src={filterImagePreview}
-                                alt="معاينة"
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <span className="text-xs text-gray-600">Image Preview Delete</span>
-                            <button
-                              onClick={() => {
-                                setSelectedFilterImage(null);
-                                setFilterImagePreview('');
-                              }}
-                              className="text-red-500 hover:text-red-700 text-xs"
-                            >
-                              حذف
-                            </button>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={handleSaveNewFilter}
-                            className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded hover:bg-orange-600 transition-colors"
-                          >
-                            yes
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowAddFilterForm(false);
-                              setNewFilterData({ name: '', image: '' });
-                              setSelectedFilterImage(null);
-                              setFilterImagePreview('');
-                            }}
-                            className="px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
-                          >
-                            No
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  </>
-                )}
-                
-                {/* عرض الفلاتر الجديدة المضافة */}
-                {customFilters.map((filter) => (
-                  <MenuItem 
-                    key={filter.id}
-                    icon={
-                      filter.image ? (
-                        <div className="w-5 h-5 rounded overflow-hidden">
-                          <img 
-                            src={filter.image} 
-                            alt={filter.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (nextElement) {
-                                nextElement.style.display = 'flex';
-                              }
-                            }}
-                          />
-                          <div className="w-full h-full bg-orange-200 rounded flex items-center justify-center" style={{display: filter.image ? 'none' : 'flex'}}>
-                            <Filter className="w-4 h-4 text-orange-600" />
-                          </div>
-                        </div>
-                      ) : (
-                        <Filter className="w-5 h-5 text-orange-500" />
-                      )
-                    } 
-                    label={filter.name}
-                    hasDropdown={true}
-                    dropdownOpen={filter.dropdownOpen}
-                    onToggleDropdown={() => {
-                      setCustomFilters(prev => prev.map(f => 
-                        f.id === filter.id ? {...f, dropdownOpen: !f.dropdownOpen} : f
-                      ));
-                    }}
-                  >
-                    {/* UPDATED: Show empty state for new filters with only "add New" button */}
-                    {(!filter.links || filter.links.length === 0) ? (
-                      <div className="bg-white rounded-lg p-3">
-                        {/* Empty state - Show only "add New" button for admin */}
-                        {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                          <div>
-                            {showAddLinkForm !== filter.id ? (
-                              <button
-                                onClick={() => setShowAddLinkForm(filter.id)}
-                                className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 rounded-lg cursor-pointer group border border-blue-300 hover:border-blue-400 transition-all duration-200 bg-blue-50"
-                              >
-                                <div className="w-5 h-5 bg-blue-200 rounded flex items-center justify-center">
-                                  <span className="text-blue-600 text-sm font-bold">➕</span>
-                                </div>
-                                <span className="text-sm text-blue-600 font-medium">add New</span>
-                              </button>
-                            ) : (
-                              <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={newFilterLinkData.name}
-                                    onChange={(e) => setNewFilterLinkData({...newFilterLinkData, name: e.target.value})}
-                                    placeholder="Name url"
-                                    className="flex-1 px-3 py-2 text-sm text-black border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <label className="flex-1 px-3 py-2 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white hover:bg-blue-50 transition-colors">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={handleLinkImageUpload}
-                                      className="hidden"
-                                    />
-                                    <span className="text-gray-600">
-                                      {selectedLinkImage ? 'Image selected' : 'add photo'}
-                                    </span>
-                                  </label>
-                                </div>
-                                
-                                {/* معاينة الصورة */}
-                                {linkImagePreview && (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-12 h-12 border border-blue-300 rounded overflow-hidden">
-                                      <img
-                                        src={linkImagePreview}
-                                        alt="معاينة"
-                                  className="w-full h-full object-cover"
-                                      />
-                              </div>
-                                    <span className="text-xs text-gray-600">معاينة الصورة</span>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedLinkImage(null);
-                                        setLinkImagePreview('');
-                                      }}
-                                      className="text-red-500 hover:text-red-700 text-xs"
-                                    >
-                                      حذف
-                                    </button>
-                            </div>
-                                )}
-                                
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleSaveNewFilterLink(filter.id)}
-                                    className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                                  >
-                                    add
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setShowAddLinkForm(null);
-                                      setNewFilterLinkData({ name: '', image: '' });
-                                      setSelectedLinkImage(null);
-                                      setLinkImagePreview('');
-                                    }}
-                                    className="px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
-                                  >
-                                    delete
-                                  </button>
-                          </div>
-                              </div>
-                      )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-white rounded-lg p-3 space-y-1">
-                      
-                      {/* عرض الروابط المضافة - تظهر لجميع المستخدمين */}
-                      {filter.links && filter.links.length > 0 && (
-                        <div className="space-y-1">
-                          {filter.links.map((link) => (
-                            <Link key={link.id} to={link.url} className="block" onClick={() => setMenuOpen(false)}>
-                              <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer">
-                                <div className="w-6 h-6 bg-blue-200 rounded flex items-center justify-center overflow-hidden">
-                                  {link.image ? (
-                                    <img 
-                                      src={link.image} 
-                                      alt={link.name}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                        if (nextElement) {
-                                          nextElement.style.display = 'flex';
-                                        }
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div className="w-full h-full bg-blue-300 rounded flex items-center justify-center" style={{display: link.image ? 'none' : 'flex'}}>
-                                    <Filter className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                </div>
-                                <span className="text-sm text-gray-800">{link.name}</span>
-                                
-                                {/* أزرار التعديل والحذف للرابط */}
-                                {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                                  <div className="flex items-center gap-1 ml-auto">
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        const newName = prompt('أدخل الاسم الجديد:', link.name);
-                                        if (newName && newName.trim()) {
-                                          setCustomFilters(prev => prev.map(f => 
-                                            f.id === filter.id 
-                                              ? {...f, links: f.links?.map(l => 
-                                                  l.id === link.id ? {...l, name: newName.trim()} : l
-                                                ) || []}
-                                              : f
-                                          ));
-                                          localStorage.setItem('customFilters', JSON.stringify(
-                                            customFilters.map(f => 
-                                              f.id === filter.id 
-                                                ? {...f, links: f.links?.map(l => 
-                                                    l.id === link.id ? {...l, name: newName.trim()} : l
-                                                  ) || []}
-                                                : f
-                                            )
-                                          ));
-                                        }
-                                      }}
-                                      className="bg-blue-500 text-white px-1 py-1 rounded text-xs hover:bg-blue-600 transition-colors"
-                                      title="تعديل اسم الرابط"
-                                    >
-                                      ✏️
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (confirm('هل أنت متأكد من حذف هذا الرابط؟')) {
-                                          setCustomFilters(prev => prev.map(f => 
-                                            f.id === filter.id 
-                                              ? {...f, links: f.links?.filter(l => l.id !== link.id) || []}
-                                              : f
-                                          ));
-                                          localStorage.setItem('customFilters', JSON.stringify(
-                                            customFilters.map(f => 
-                                              f.id === filter.id 
-                                                ? {...f, links: f.links?.filter(l => l.id !== link.id) || []}
-                                                : f
-                                            )
-                                          ));
-                                        }
-                                      }}
-                                      className="bg-red-500 text-white px-1 py-1 rounded text-xs hover:bg-red-600 transition-colors"
-                                      title="حذف الرابط"
-                                    >
-                                      🗑️
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                      <Link to="/filters-catalogue" className="block" onClick={() => setMenuOpen(false)}>
-                        <div className="text-xs text-gray-500 mt-2 cursor-pointer hover:text-orange-500">
-                          Voir plus de catégories
-                        </div>
-                      </Link>
-                      
-                      {/* أزرار التعديل والحذف للمديرين */}
-                      {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const newName = prompt('أدخل الاسم الجديد:', filter.name);
-                              if (newName && newName.trim()) {
-                                setCustomFilters(prev => prev.map(f => 
-                                  f.id === filter.id ? {...f, name: newName.trim()} : f
-                                ));
-                                localStorage.setItem('customFilters', JSON.stringify(
-                                  customFilters.map(f => 
-                                    f.id === filter.id ? {...f, name: newName.trim()} : f
-                                  )
-                                ));
-                              }
-                            }}
-                            className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                            title="تعديل اسم الفلتر"
-                          >
-                            Modifications
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              if (confirm('هل أنت متأكد من حذف هذا الفلتر؟')) {
-                                setCustomFilters(prev => prev.filter(f => f.id !== filter.id));
-                                localStorage.setItem('customFilters', JSON.stringify(
-                                  customFilters.filter(f => f.id !== filter.id)
-                                ));
-                              }
-                            }}
-                            className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                            title="حذف الفلتر"
-                          >
-                            delete
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* حقل إضافة رابط جديد للمديرين */}
-                      {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          {showAddLinkForm !== filter.id ? (
-                            <button
-                              onClick={() => setShowAddLinkForm(filter.id)}
-                              className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 rounded-lg cursor-pointer group border border-blue-300 hover:border-blue-400 transition-all duration-200 bg-blue-50"
-                            >
-                              <div className="w-5 h-5 bg-blue-200 rounded flex items-center justify-center">
-                                <span className="text-blue-600 text-sm font-bold">➕</span>
-                              </div>
-                              <span className="text-sm text-blue-600 font-medium">add New</span>
-                            </button>
-                          ) : (
-                            <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={newFilterLinkData.name}
-                                  onChange={(e) => setNewFilterLinkData({...newFilterLinkData, name: e.target.value})}
-                                  placeholder="Name url"
-                                  className="flex-1 px-3 py-2 text-sm text-black border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <label className="flex-1 px-3 py-2 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white hover:bg-blue-50 transition-colors">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleLinkImageUpload}
-                                    className="hidden"
-                                  />
-                                  <span className="text-gray-600">
-                                    {selectedLinkImage ? 'Image selected' : 'add photo'}
-                                  </span>
-                                </label>
-                              </div>
-                              
-                              {/* معاينة الصورة */}
-                              {linkImagePreview && (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-12 h-12 border border-blue-300 rounded overflow-hidden">
-                                    <img
-                                      src={linkImagePreview}
-                                      alt="معاينة"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <span className="text-xs text-gray-600">معاينة الصورة</span>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedLinkImage(null);
-                                      setLinkImagePreview('');
-                                    }}
-                                    className="text-red-500 hover:text-red-700 text-xs"
-                                  >
-                                    حذف
-                                  </button>
-                                </div>
-                              )}
-                              
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleSaveNewFilterLink(filter.id)}
-                                  className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                                >
-                                  add
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setShowAddLinkForm(null);
-                                    setNewFilterLinkData({ name: '', image: '' });
-                                    setSelectedLinkImage(null);
-                                    setLinkImagePreview('');
-                                  }}
-                                  className="px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
-                                >
-                                  delete
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    )}
-                  </MenuItem>
-                ))}
-                
-                <MenuItem 
-                  icon={<Filter className="w-5 h-5 text-orange-500" />} 
-                  label="Filtre" 
-                  hasDropdown={true}
-                  dropdownOpen={filtresDropdownOpen}
-                  onToggleDropdown={() => setFiltresDropdownOpen(!filtresDropdownOpen)}
-                >
-                  <div className="bg-white rounded-lg p-3 space-y-1">
-                    {!deletedFilters.includes('Filtre à huile') && (
-                    <Link to={`/filter/${Date.now()}`} className="block" onClick={() => setMenuOpen(false)}>
-                      <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                        <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
-                          <Droplets className="w-4 h-4 text-gray-600" />
-                        </div>
-                        {editingFilter === 'Filtre à huile' ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="text-sm text-gray-800 border border-orange-300 rounded px-2 py-1 flex-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveFilter();
-                                if (e.key === 'Escape') handleCancelEdit();
-                              }}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSaveFilter();
-                              }}
-                              className="text-green-600 hover:text-green-800 text-xs"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCancelEdit();
-                              }}
-                              className="text-red-600 hover:text-red-800 text-xs"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between flex-1">
-                            <span className="text-sm text-gray-800">{filterNames['Filtre à huile']}</span>
-                            {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                              <div className="flex items-center gap-2 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleEditFilter('Filtre à huile');
-                                  }}
-                                  className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                  title="تعديل اسم الفلتر"
-                                >
-                                  تعديل
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleDeleteFilter('Filtre à huile');
-                                  }}
-                                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                  title="حذف الفلتر"
-                                >
-                                  حذف
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    )}
-                    {!deletedFilters.includes('Filtre à air') && (
-                    <Link to={`/filter/${Date.now()}`} className="block" onClick={() => setMenuOpen(false)}>
-                      <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                        <div className="w-6 h-6 bg-orange-200 rounded flex items-center justify-center">
-                          <AirVent className="w-4 h-4 text-orange-600" />
-                        </div>
-                        {editingFilter === 'Filtre à air' ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="text-sm text-gray-800 border border-orange-300 rounded px-2 py-1 flex-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveFilter();
-                                if (e.key === 'Escape') handleCancelEdit();
-                              }}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSaveFilter();
-                              }}
-                              className="text-green-600 hover:text-green-800 text-xs"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCancelEdit();
-                              }}
-                              className="text-red-600 hover:text-red-800 text-xs"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between flex-1">
-                            <span className="text-sm text-gray-800">{filterNames['Filtre à air']}</span>
-                            {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleEditFilter('Filtre à air');
-                                  }}
-                                  className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                  title="تعديل اسم الفلتر"
-                                >
-                                  تعديل
-                                </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleDeleteFilter('Filtre à air');
-                                    }}
-                                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                  title="حذف الفلتر"
-                                >
-                                  حذف
-                                  </button>
-                                </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    )}
-                    {!deletedFilters.includes('Filtre d\'habitacle') && (
-                    <Link to={`/filter/${Date.now()}`} className="block" onClick={() => setMenuOpen(false)}>
-                      <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                        <div className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center">
-                          <WindIcon className="w-4 h-4 text-gray-600" />
-                        </div>
-                        {editingFilter === 'Filtre d\'habitacle' ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="text-sm text-gray-800 border border-orange-300 rounded px-2 py-1 flex-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveFilter();
-                                if (e.key === 'Escape') handleCancelEdit();
-                              }}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSaveFilter();
-                              }}
-                              className="text-green-600 hover:text-green-800 text-xs"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCancelEdit();
-                              }}
-                              className="text-red-600 hover:text-red-800 text-xs"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between flex-1">
-                            <span className="text-sm text-gray-800">{filterNames['Filtre d\'habitacle']}</span>
-                            {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleEditFilter('Filtre d\'habitacle');
-                                  }}
-                                  className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                  title="تعديل اسم الفلتر"
-                                >
-                                  تعديل
-                                </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleDeleteFilter('Filtre d\'habitacle');
-                                    }}
-                                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                  title="حذف الفلتر"
-                                >
-                                  حذف
-                                  </button>
-                                </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    )}
-                    {!deletedFilters.includes('Filtre à carburant') && (
-                    <Link to={`/filter/${Date.now()}`} className="block" onClick={() => setMenuOpen(false)}>
-                      <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                        <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
-                          <Fuel className="w-4 h-4 text-gray-600" />
-                        </div>
-                        {editingFilter === 'Filtre à carburant' ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="text-sm text-gray-800 border border-orange-300 rounded px-2 py-1 flex-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveFilter();
-                                if (e.key === 'Escape') handleCancelEdit();
-                              }}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSaveFilter();
-                              }}
-                              className="text-green-600 hover:text-green-800 text-xs"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCancelEdit();
-                              }}
-                              className="text-red-600 hover:text-red-800 text-xs"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between flex-1">
-                            <span className="text-sm text-gray-800">{filterNames['Filtre à carburant']}</span>
-                            {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleEditFilter('Filtre à carburant');
-                                  }}
-                                  className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                  title="تعديل اسم الفلتر"
-                                >
-                                  تعديل
-                                </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleDeleteFilter('Filtre à carburant');
-                                    }}
-                                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                  title="حذف الفلتر"
-                                >
-                                  حذف
-                                  </button>
-                                </div>
-                            )}
-                      </div>
-                        )}
-                      </div>
-                    </Link>
-                    )}
-                    
-                    {/* حقل إضافة رابط جديد - للمديرين فقط */}
-                    {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                      <div className="border-t border-gray-200 pt-2 mt-2">
-                        {!showInlineForm ? (
-                          <button
-                            onClick={() => setShowInlineForm(true)}
-                            className="w-full flex items-center gap-3 py-2 px-2 hover:bg-orange-50 rounded cursor-pointer group border-2 border-dashed border-orange-300 hover:border-orange-400 transition-all duration-200"
-                          >
-                            <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-                              <span className="text-orange-600 text-lg">➕</span>
-                        </div>
-                            <span className="text-sm text-orange-600 font-medium">add New</span>
-                          </button>
-                        ) : (
-                          <div className="space-y-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={inlineLinkData.name}
-                                onChange={(e) => setInlineLinkData({...inlineLinkData, name: e.target.value})}
-                                placeholder="اسم الرابط"
-                                className="flex-1 px-2 py-1 text-sm border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-                              />
-                              <label className="flex-1 px-2 py-1 text-sm border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 cursor-pointer bg-white hover:bg-orange-50 transition-colors">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                  className="hidden"
-                                />
-                                <span className="text-gray-600">
-                                  {selectedImage ? 'Image selected' : 'اختر صورة'}
-                                </span>
-                              </label>
-                      </div>
-                            
-                            {/* معاينة الصورة */}
-                            {imagePreview && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 border border-orange-300 rounded overflow-hidden">
-                                  <img
-                                    src={imagePreview}
-                                    alt="معاينة"
-                                    className="w-full h-full object-cover"
-                                  />
-                        </div>
-                                <span className="text-xs text-gray-600">معاينة الصورة</span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedImage(null);
-                                    setImagePreview('');
-                                  }}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  حذف
-                                </button>
-                        </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={handleAddInlineLink}
-                                className="flex-1 px-3 py-1 bg-orange-500 text-white text-sm rounded hover:bg-orange-600 transition-colors"
-                              >
-                                إضافة إلى صفحة sihem
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowInlineForm(false);
-                                  setInlineLinkData({ name: '', image: '', url: '' });
-                                  setSelectedImage(null);
-                                  setImagePreview('');
-                                }}
-                                className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
-                              >
-                                إلغاء
-                              </button>
-                        </div>
-                      </div>
-                        )}
-                        </div>
-                    )}
-                    
-                    {/* عرض الروابط المضافة مع الروابط القديمة */}
-                    {customLinks.map((link) => (
-                      <div key={link.id}>
-                        {editingLink === link.id ? (
-                          // وضع التعديل
-                          <div className="space-y-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={editLinkData.name}
-                                onChange={(e) => setEditLinkData({...editLinkData, name: e.target.value})}
-                                placeholder="اسم الرابط"
-                                className="flex-1 px-2 py-1 text-sm border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-                              />
-                              <label className="flex-1 px-2 py-1 text-sm border border-orange-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 cursor-pointer bg-white hover:bg-orange-50 transition-colors">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleEditImageUpload}
-                                  className="hidden"
-                                />
-                                <span className="text-gray-600">
-                                  {editImagePreview ? 'Image selected' : 'اختر صورة'}
-                                </span>
-                              </label>
-                      </div>
-                            
-                            {/* معاينة الصورة للتعديل */}
-                            {editImagePreview && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 border border-orange-300 rounded overflow-hidden">
-                                  <img
-                                    src={editImagePreview}
-                                    alt="معاينة"
-                                    className="w-full h-full object-cover"
-                                  />
-                        </div>
-                                <span className="text-xs text-gray-600">معاينة الصورة</span>
-                                <button
-                                  onClick={() => {
-                                    setEditImagePreview('');
-                                  }}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  حذف
-                                </button>
-                        </div>
-                            )}
-                            
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={handleSaveEdit}
-                                className="flex-1 px-3 py-1 bg-orange-500 text-white text-sm rounded hover:bg-orange-600 transition-colors"
-                              >
-                                حفظ
-                              </button>
-                              <button
-                                onClick={handleCancelLinkEdit}
-                                className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
-                              >
-                                إلغاء
-                              </button>
-                        </div>
-                      </div>
-                        ) : (
-                          // وضع العرض العادي
-                          <Link 
-                            to={`/filter/${Date.now()}`} 
-                            className="block" 
-                            onClick={() => setMenuOpen(false)}
-                          >
-                            <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                              <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
-                                {link.image ? (
-                                  <img 
-                                    src={link.image} 
-                                    alt={link.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (nextElement) {
-                                        nextElement.style.display = 'flex';
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-                                <div className="w-full h-full bg-gray-300 rounded flex items-center justify-center" style={{display: link.image ? 'none' : 'flex'}}>
-                                  <span className="text-gray-600 text-xs">🔗</span>
-                        </div>
-                      </div>
-                              <div className="flex items-center justify-between flex-1">
-                                <span className="text-sm text-gray-800 group-hover:text-orange-500 transition-colors">
-                                  {link.name}
-                                </span>
-                                {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                                  <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          handleEditLink(link.id);
-                                        }}
-                                  className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                  title="تعديل الرابط"
-                                >
-                                  تعديل
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          if (confirm('هل أنت متأكد من حذف هذا الرابط؟')) {
-                                            const updatedLinks = customLinks.filter(l => l.id !== link.id);
-                                            setCustomLinks(updatedLinks);
-                                            localStorage.setItem('customLinks', JSON.stringify(updatedLinks));
-                                          }
-                                        }}
-                                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                  title="حذف الرابط"
-                                >
-                                  حذف
-                                      </button>
-                          </div>
-                                )}
-                      </div>
-                      </div>
-                    </Link>
-                        )}
-                        </div>
-                    ))}
-                    
-                    {/* عرض الفلاتر الجديدة المضافة */}
-                    {Object.entries(filterNames).map(([key, value]) => {
-                      // تجاهل الفلاتر الأساسية المعروفة
-                      const basicFilters = ['Filtre à huile', 'Filtre à air', 'Filtre d\'habitacle', 'Filtre à carburant'];
-                      if (basicFilters.includes(key)) return null;
-                      
-                      return (
-                        <div key={key}>
-                          {!deletedFilters.includes(key) && (
-                    <Link to={`/filter/${Date.now()}`} className="block" onClick={() => setMenuOpen(false)}>
-                              <div className="flex items-center gap-3 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer group">
-                        <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
-                          <Filter className="w-4 h-4 text-gray-600" />
-                        </div>
-                                {editingFilter === key ? (
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <input
-                                      type="text"
-                                      value={editValue}
-                                      onChange={(e) => setEditValue(e.target.value)}
-                                      className="text-sm text-gray-800 border border-orange-300 rounded px-2 py-1 flex-1"
-                                      autoFocus
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveFilter();
-                                        if (e.key === 'Escape') handleCancelEdit();
-                                      }}
-                                    />
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleSaveFilter();
-                                      }}
-                                      className="text-green-600 hover:text-green-800 text-xs"
-                                    >
-                                      ✓
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleCancelEdit();
-                                      }}
-                                      className="text-red-600 hover:text-red-800 text-xs"
-                                    >
-                                      ✕
-                                    </button>
-                        </div>
-                                ) : (
-                                  <div className="flex items-center justify-between flex-1">
-                                    <span className="text-sm text-gray-800">{value}</span>
-                                    {(user && (user.role === 'admin' || user.is_admin === true)) && (
-                                      <div className="flex items-center gap-2 ml-2">
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleEditFilter(key);
-                                          }}
-                                          className="bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600 transition-colors"
-                                          title="تعديل اسم الفلتر"
-                                        >
-                                          تعديل
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleDeleteFilter(key);
-                                          }}
-                                          className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                          title="حذف الفلتر"
-                                        >
-                                          حذف
-                                        </button>
-                        </div>
-                                    )}
-                      </div>
-                                )}
-                      </div>
-                    </Link>
-                          )}
-                        </div>
-                      );
-                    })}
-                    
-                    {/* أيقونة إضافة رابط جديد - للمديرين فقط */}
-                    {(() => {
-                      console.log('فحص user:', user, 'role:', user?.role, 'is_admin:', user?.is_admin);
-                      return user && (user.role === 'admin' || user.is_admin === true);
-                    })() && (
-                      <div className="border-t border-gray-200 pt-2 mt-2">
-                        <button
-                          onClick={() => {
-                            console.log('تم الضغط على إضافة فلتر جديد');
-                            // إضافة رابط جديد مثل "Filtre"
-                            const newFilterName = prompt('أدخل اسم الفلتر الجديد:');
-                            if (newFilterName && newFilterName.trim()) {
-                              const newFilterKey = newFilterName.trim();
-                              console.log('إضافة فلتر جديد:', newFilterKey);
-                              setFilterNames(prev => ({
-                                ...prev,
-                                [newFilterKey]: newFilterKey
-                              }));
-                              // حفظ في localStorage
-                              localStorage.setItem('filterNames', JSON.stringify({
-                                ...filterNames,
-                                [newFilterKey]: newFilterKey
-                              }));
-                            }
-                          }}
-                          className="w-full flex items-center gap-3 py-2 px-2 hover:bg-orange-50 rounded cursor-pointer group border-2 border-dashed border-orange-300 hover:border-orange-400 transition-all duration-200"
-                        >
-                          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-                            <span className="text-orange-600 text-lg">➕</span>
-                        </div>
-                          <span className="text-sm text-orange-600 font-medium">إضافة فلتر جديد</span>
-                        </button>
-                      </div>
-                    )}
-                    
-                    <Link to="/filters-catalogue" className="block" onClick={() => setMenuOpen(false)}>
-                      <div className="text-xs text-gray-500 mt-2 cursor-pointer hover:text-orange-500">
-                        Voir plus de catégories
-                      </div>
-                    </Link>
-                  </div>
-                </MenuItem>
+          {/* Familles des pièces section - Mobile/Tablet only */}
+          <div className="lg:hidden border-t border-[#F97316]/30 pt-6 px-4 pb-4">
+            <h3 className="text-[#F97316] font-bold text-lg mb-4">FAMILLES DES PIÈCES</h3>
+            
+            {menuFamillesLoading ? (
+              <div className="py-8 text-center">
+                <div className="inline-block h-6 w-6 rounded-full border-b-2 border-[#F97316] animate-spin" />
+                <p className="mt-2 text-sm text-gray-400">Chargement...</p>
               </div>
-            </div>
-
-            {/* Admin Dashboard Link - Only for Admin */}
-            {user && (user.role === 'admin' || user.is_admin === true) && (
-              <div className="border-b lg:border-b-0 lg:border-r border-[#F97316]/30 pb-4 mb-4 lg:pb-0 lg:mb-0 lg:pr-8 lg:w-auto lg:flex-shrink-0 lg:min-w-[220px] min-w-0">
-                <Link to="/admin-dashboard" onClick={() => setMenuOpen(false)}>
-                  <div className="bg-gradient-to-r from-[#F97316] to-[#ea580c] rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:from-[#ea580c] hover:to-[#dc2626] transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
-                    <div className="flex items-center gap-3 lg:gap-4">
-                      <div className="bg-white/20 p-2.5 lg:p-3 rounded-full">
-                        <Settings className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-lg lg:text-xl">Dashboard Admin</p>
-                        <p className="text-white/80 text-xs lg:text-sm">Tableau de bord administrateur</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+            ) : menuFamilles.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Aucune catégorie disponible.</p>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto">
+                <MobileFamilleAccordion
+                  familles={menuFamilles}
+                  expandedIndex={expandedFamilleIndex}
+                  onToggle={(index) => setExpandedFamilleIndex((prev) => (prev === index ? null : index))}
+                  onLinkClick={() => setMenuOpen(false)}
+                />
               </div>
             )}
-
-            {/* زر تسجيل الدخول / تسجيل الخروج */}
-            <div className="border-b lg:border-b-0 lg:border-r border-[#F97316]/30 pb-4 mb-4 lg:pb-0 lg:mb-0 lg:pr-8 lg:w-auto lg:flex-shrink-0 lg:min-w-[220px] min-w-0">
-              {user ? (
-                <div onClick={() => { handleLogout(); setMenuOpen(false); }} className="cursor-pointer">
-                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
-                    <div className="flex items-center gap-3 lg:gap-4">
-                      <div className="bg-white/20 p-2.5 lg:p-3 rounded-full">
-                        <LogOut className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-lg lg:text-xl">Se déconnecter</p>
-                        <p className="text-white/80 text-xs lg:text-sm">Déconnexion de {user.name || user.email}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Link to="/login" onClick={() => setMenuOpen(false)}>
-                  <div className="bg-gradient-to-r from-[#F97316] to-[#ea580c] rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:from-[#ea580c] hover:to-[#dc2626] transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
-                    <div className="flex items-center gap-3 lg:gap-4">
-                      <div className="bg-white/20 p-2.5 lg:p-3 rounded-full">
-                        <User className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-lg lg:text-xl">Se connecter</p>
-                        <p className="text-white/80 text-xs lg:text-sm">Accédez à votre compte</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              )}
-            </div>
-
-            {/* LIENS UTILES Section */}
-            <div className="border-b lg:border-b-0 lg:border-r border-[#F97316]/30 pb-4 mb-4 lg:pb-0 lg:mb-0 lg:pr-8 lg:w-auto lg:flex-shrink-0 lg:min-w-[220px] min-w-0 transition-all duration-300 ease-in-out">
-              <h3 className="text-[#F97316] font-bold text-base lg:text-lg mb-4 lg:mb-6">LIENS UTILES</h3>
-              <div className="space-y-1 lg:space-y-2">
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Livraison" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Politique de confidentialité" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Paramètres des cookies" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Échange d'article" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Fabricants" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Modes de télépaiement" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Contact" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="CGV" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Liste de souhaits" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Déclaration d'accessibilité" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Blog" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Acheter en fonction de la marque" simple />
-                <MenuItem icon={<FileText className="w-5 h-5 lg:w-6 lg:h-6 text-[#F97316]" />} label="Acheter en fonction du modèle" simple />
-              </div>
-            </div>
-
-            {/* Service client */}
-            <div className="pb-4 lg:pr-6 lg:w-auto lg:flex-shrink-0 lg:min-w-[220px] min-w-0 transition-all duration-300 ease-in-out">
-              <h3 className="text-[#F97316] font-bold text-base lg:text-lg mb-4 lg:mb-6">Service client</h3>
-              <div className="space-y-3 lg:space-y-4 text-sm lg:text-base">
-                <div className="flex items-start gap-3 lg:gap-4 p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-[#1a1a1a]/50 border border-[#F97316]/20 hover:border-[#F97316]/40 transition-all duration-300">
-                  <span className="text-green-500 text-lg lg:text-xl mt-1">●</span>
-                  <div>
-                    <p className="text-gray-300 lg:text-gray-200 font-medium mb-2">Heures d'ouverture du service client pour la langue:</p>
-                    <p className="text-gray-400 lg:text-gray-300">Lundi - Jeudi 8 h 30 à 17 h 00<br />Vendredi 8 h 30 à 16 h 00</p>
-                  </div>
-                </div>
-                <div className="p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-[#1a1a1a]/50 border border-[#F97316]/20">
-                  <p className="text-gray-400 lg:text-gray-300 font-medium">Délai de réponse</p>
-                </div>
-              </div>
-            </div>
+          </div>
+          
+          {/* Empty menu container */}
+          <div className="space-y-2 lg:flex lg:flex-row lg:space-y-0 lg:gap-8 lg:overflow-x-auto lg:pb-6 lg:px-4">
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* نافذة إضافة رابط جديد */}
-      {showAddLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">add New</h3>
-              <button
-                onClick={() => setShowAddLinkModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* حقل اسم الرابط */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  اسم الرابط *
-                </label>
-                <input
-                  type="text"
-                  value={newLinkData.name}
-                  onChange={(e) => setNewLinkData({...newLinkData, name: e.target.value})}
-                  placeholder="أدخل اسم الرابط"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              {/* حقل رابط الصورة */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  رابط الصورة
-                </label>
-                <input
-                  type="url"
-                  value={newLinkData.image}
-                  onChange={(e) => setNewLinkData({...newLinkData, image: e.target.value})}
-                  placeholder="أدخل رابط الصورة (اختياري)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              {/* حقل رابط الوجهة */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  رابط الوجهة *
-                </label>
-                <input
-                  type="url"
-                  value={newLinkData.url}
-                  onChange={(e) => setNewLinkData({...newLinkData, url: e.target.value})}
-                  placeholder="أدخل رابط الوجهة"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              {/* معاينة الصورة */}
-              {newLinkData.image && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    معاينة الصورة
-                  </label>
-                  <div className="w-16 h-16 border border-gray-300 rounded-md overflow-hidden">
-                    <img
-                      src={newLinkData.image}
-                      alt="معاينة"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* أزرار الإجراءات */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleAddNewLink}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-md transition-colors"
-              >
-                إضافة الرابط
-              </button>
-              <button
-                onClick={() => setShowAddLinkModal(false)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-md transition-colors"
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

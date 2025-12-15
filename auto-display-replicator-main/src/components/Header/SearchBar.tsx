@@ -163,24 +163,24 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '', onSearch }) => {
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative w-full ${className}`}>
       <form 
         onSubmit={handleSubmit}
-        className="relative"
+        className="relative w-full"
       >
-        <div className="relative">
-          {/* Search Icon Button - Clickable */}
+        <div className="relative w-full">
+          {/* Search Icon Button - Clickable, Touch-friendly */}
           <button
             type="submit"
             onClick={(e) => {
               e.preventDefault();
               handleSubmit(e);
             }}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-all cursor-pointer z-10"
+            className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-all cursor-pointer z-10 min-w-[36px] min-h-[36px] flex items-center justify-center"
             aria-label="Search"
             title="بحث"
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           
           <input
@@ -203,11 +203,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '', onSearch }) => {
                 setShowSuggestions(true);
               }
             }}
-            placeholder="Q Rechercher des pièces automobiles..."
-            className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-lg 
+            placeholder="Rechercher des pièces..."
+            className="w-full pl-3 sm:pl-4 pr-10 sm:pr-12 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-lg 
                      focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent
                      transition-all duration-200 text-gray-700 placeholder-gray-400
-                     hover:border-gray-300 text-right"
+                     hover:border-gray-300 text-right text-sm sm:text-base min-h-[44px]"
             dir="rtl"
           />
           
@@ -216,26 +216,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '', onSearch }) => {
               <button
                 type="button"
                 onClick={handleClear}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10 p-1 min-w-[28px] min-h-[28px] flex items-center justify-center"
                 aria-label="Clear search"
                 title="مسح"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               
-              {/* Results Count Badge */}
+              {/* Results Count Badge - Hidden on very small screens */}
               {resultsCount > 0 && !isLoading && (
-                <div className="absolute left-12 top-1/2 transform -translate-y-1/2 z-10">
-                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
-                    {resultsCount} نتيجة
+                <div className="absolute left-8 sm:left-12 top-1/2 transform -translate-y-1/2 z-10 hidden xs:block">
+                  <span className="text-[10px] sm:text-xs bg-orange-100 text-orange-700 px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                    {resultsCount}
                   </span>
                 </div>
               )}
               
               {/* Loading Indicator */}
               {isLoading && (
-                <div className="absolute left-12 top-1/2 transform -translate-y-1/2 z-10">
-                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute left-8 sm:left-12 top-1/2 transform -translate-y-1/2 z-10">
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
             </>

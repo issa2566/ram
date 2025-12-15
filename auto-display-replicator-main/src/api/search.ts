@@ -1,5 +1,5 @@
-// Search API using JSON Server
-const API_BASE_URL = 'http://69.169.108.182:3000';
+// Search API - PostgreSQL Backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export interface SearchOptionData {
   id?: string;
@@ -10,15 +10,23 @@ export interface SearchOptionData {
 export const getSearchOptions = async (field?: string): Promise<SearchOptionData[]> => {
   try {
     const url = field ? `${API_BASE_URL}/searchOptions?field=${field}` : `${API_BASE_URL}/searchOptions`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch search options');
-    return await response.json();
+    const response = await fetch(url, { cache: 'no-store' });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch search options: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    // Handle API response format: { success: true, data: [...] }
+    if (!result.success || !result.data) {
+      throw new Error('Invalid API response format');
+    }
+    
+    return result.data;
   } catch (error) {
-    console.error('Error fetching search options:', error);
-    // Fallback to localStorage
-    const savedOptions = localStorage.getItem('searchOptions');
-    const options = savedOptions ? JSON.parse(savedOptions) : [];
-    return field ? options.filter((opt: SearchOptionData) => opt.field === field) : options;
+    console.error('❌ Error fetching search options:', error);
+    throw error; // Don't fallback to localStorage
   }
 };
 
@@ -31,16 +39,22 @@ export const createSearchOption = async (data: SearchOptionData): Promise<Search
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to create search option');
-    return await response.json();
+    
+    if (!response.ok) {
+      throw new Error(`Failed to create search option: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    // Handle API response format: { success: true, data: {...} }
+    if (!result.success || !result.data) {
+      throw new Error('Invalid API response format');
+    }
+    
+    return result.data;
   } catch (error) {
-    console.error('Error creating search option:', error);
-    // Fallback to localStorage
-    const options = JSON.parse(localStorage.getItem('searchOptions') || '[]');
-    const newOption = { ...data, id: Date.now().toString() };
-    options.push(newOption);
-    localStorage.setItem('searchOptions', JSON.stringify(options));
-    return newOption;
+    console.error('❌ Error creating search option:', error);
+    throw error; // Don't fallback to localStorage
   }
 };
 
@@ -49,35 +63,47 @@ export const deleteSearchOption = async (id: string): Promise<boolean> => {
     const response = await fetch(`${API_BASE_URL}/searchOptions/${id}`, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Failed to delete search option');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to delete search option: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete search option');
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error deleting search option:', error);
-    // Fallback to localStorage
-    const options = JSON.parse(localStorage.getItem('searchOptions') || '[]');
-    const filteredOptions = options.filter((opt: any) => opt.id !== id);
-    localStorage.setItem('searchOptions', JSON.stringify(filteredOptions));
-    return true;
+    console.error('❌ Error deleting search option:', error);
+    throw error; // Don't fallback to localStorage
   }
 };
 
 export const deleteSearchOptionByValue = async (field: string, value: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/searchOptions?field=${field}&value=${value}`);
-    if (!response.ok) throw new Error('Failed to fetch search options');
-    const options = await response.json();
+    const response = await fetch(`${API_BASE_URL}/searchOptions/field-value`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ field, value }),
+    });
     
-    // Delete all matching options
-    for (const option of options) {
-      await deleteSearchOption(option.id);
+    if (!response.ok) {
+      throw new Error(`Failed to delete search option: ${response.statusText}`);
     }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete search option');
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error deleting search option by value:', error);
-    // Fallback to localStorage
-    const options = JSON.parse(localStorage.getItem('searchOptions') || '[]');
-    const filteredOptions = options.filter((opt: SearchOptionData) => !(opt.field === field && opt.value === value));
-    localStorage.setItem('searchOptions', JSON.stringify(filteredOptions));
-    return true;
+    console.error('❌ Error deleting search option by value:', error);
+    throw error; // Don't fallback to localStorage
   }
 };

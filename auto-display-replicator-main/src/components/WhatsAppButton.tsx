@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 
 const WhatsAppButton = () => {
   // رقم الواتساب - يمكن تغييره حسب الحاجة
@@ -16,12 +16,12 @@ const WhatsAppButton = () => {
       {/* WhatsApp Floating Button */}
       <button
         onClick={handleWhatsAppClick}
-        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-2xl transition-all duration-300 hover:scale-110 group"
+        className="fixed bottom-6 right-6 z-50 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 group w-12 h-12 md:w-14 md:h-14 bg-[#25D366] shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
         aria-label="Contact us on WhatsApp"
         title="Contactez-nous sur WhatsApp"
       >
         {/* WhatsApp Icon */}
-        <MessageCircle className="w-7 h-7" />
+        <FaWhatsapp className="w-6 h-6 md:w-7 md:h-7 text-white" />
         
         {/* Notification Badge */}
         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">

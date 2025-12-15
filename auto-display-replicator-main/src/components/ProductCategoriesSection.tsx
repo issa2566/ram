@@ -225,47 +225,49 @@ const ProductCategoriesSection = () => {
   }, []);
 
   return (
-    <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-b from-white via-orange-50/5 to-white relative overflow-hidden">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white via-orange-50/5 to-white relative overflow-hidden w-full max-w-full">
       {/* Ultra-luxury texture overlay */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(249,115,22,0.02)_0%,transparent_70%)] pointer-events-none" />
       
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative z-10 overflow-hidden">
         
         {/* Title */}
-        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-8 sm:mb-10 md:mb-12 text-[#F97316] leading-tight">
+        <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-center mb-5 sm:mb-6 md:mb-8 lg:mb-10 text-[#F97316] leading-tight px-2">
           FAMILLES DES PIÈCES
         </h2>
         
         {/* Horizontal scrolling categories display with controls */}
-        <div className="relative">
+        <div className="relative w-full">
           
           {/* Scroll Left Button - Hidden on mobile */}
           <button
             onClick={scrollLeft}
             disabled={!canScrollLeft}
-            className={`hidden sm:flex absolute left-0 lg:left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-white/90 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
+            aria-label="Scroll left"
+            className={`hidden md:flex absolute -left-1 lg:left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-full bg-white/95 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
               canScrollLeft ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'
             }`}
           >
-            <ChevronLeft className="h-4 w-4 sm:h-5 sm:h-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
+            <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
           </button>
 
           {/* Scroll Right Button - Hidden on mobile */}
           <button
             onClick={scrollRight}
             disabled={!canScrollRight}
-            className={`hidden sm:flex absolute right-0 lg:right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-white/90 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
+            aria-label="Scroll right"
+            className={`hidden md:flex absolute -right-1 lg:right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-full bg-white/95 backdrop-blur-md border-2 border-gray-200 hover:border-[#F97316] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-100 items-center justify-center group ${
               canScrollRight ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'
             }`}
           >
-            <ChevronRight className="h-4 w-4 sm:h-5 sm:h-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
+            <ChevronRight className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-[#F97316] group-hover:text-[#ea580c] transition-colors" />
           </button>
 
-          {/* Categories Container */}
+          {/* Categories Container - Better mobile scroll handling */}
           <div 
             ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-4 sm:gap-5 md:gap-6 pb-4 scrollbar-hide px-8 sm:px-10 md:px-12 snap-x snap-mandatory"
-            style={{ scrollBehavior: 'smooth' }}
+            className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-5 pb-3 sm:pb-4 scrollbar-hide px-1 sm:px-2 md:px-10 lg:px-12 snap-x snap-mandatory -webkit-overflow-scrolling-touch"
+            style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
           >
             {categories.map((category, index) => {
               const IconComponent = category.icon;
@@ -274,37 +276,37 @@ const ProductCategoriesSection = () => {
               return (
                 <div
                   key={index}
-                  className="group flex-shrink-0 snap-start min-w-[280px] sm:min-w-[300px] md:min-w-[320px] lg:min-w-[350px]"
+                  className="group flex-shrink-0 snap-start w-[240px] sm:w-[260px] md:w-[280px] lg:w-[300px]"
                 >
                   {/* Category Card */}
                   <div 
-                    className="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
+                    className="bg-white rounded-lg sm:rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer h-full"
                     onClick={() => toggleCategory(index)}
                   >
                     {/* Card Header */}
-                    <div className="p-4 sm:p-5 md:p-6">
+                    <div className="p-3 sm:p-4 md:p-5">
                       <div className="text-center">
-                        <div className="mb-3 sm:mb-4 flex justify-center">
-                          <div className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#F97316]/10 to-[#E85A00]/5 border-2 transition-all duration-300 ${
+                        <div className="mb-2 sm:mb-3 flex justify-center">
+                          <div className={`p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#F97316]/10 to-[#E85A00]/5 border-2 transition-all duration-300 ${
                             isExpanded ? 'border-[#F97316] shadow-lg' : 'border-[#F97316]/20 group-hover:border-[#F97316]/50'
                           }`}>
-                            <IconComponent className={`h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 mx-auto text-[#F97316] transition-transform duration-300 ${
+                            <IconComponent className={`h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 mx-auto text-[#F97316] transition-transform duration-300 ${
                               isExpanded ? 'scale-110' : 'group-hover:scale-110'
                             }`} />
                           </div>
                         </div>
-                        <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2 text-gray-900 leading-tight group-hover:text-[#F97316] transition-colors">
+                        <h3 className="text-sm sm:text-base md:text-lg font-bold mb-1.5 sm:mb-2 text-gray-900 leading-tight group-hover:text-[#F97316] transition-colors line-clamp-2">
                           {category.name}
                         </h3>
-                        <p className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed mb-3">
+                        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-2 sm:mb-3 line-clamp-2">
                           {category.description}
                         </p>
                         {/* Expand/Collapse Icon */}
                         <div className="flex justify-center">
                           {isExpanded ? (
-                            <ChevronUp className="h-5 w-5 text-[#F97316] transition-transform duration-300" />
+                            <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#F97316] transition-transform duration-300" />
                           ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-[#F97316] transition-all duration-300" />
+                            <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-[#F97316] transition-all duration-300" />
                           )}
                         </div>
                       </div>
@@ -312,29 +314,29 @@ const ProductCategoriesSection = () => {
 
                     {/* Expanded Links List */}
                     {isExpanded && (
-                      <div className="border-t-2 border-red-500 bg-white animate-in slide-in-from-top-2 duration-300">
-                        <div className="p-4 sm:p-5 md:p-6">
-                          <h4 className="text-xs sm:text-sm md:text-base font-bold text-gray-700 uppercase mb-3 sm:mb-4 text-center">
+                      <div className="border-t-2 border-[#F97316] bg-white animate-in slide-in-from-top-2 duration-300">
+                        <div className="p-3 sm:p-4 md:p-5">
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-700 uppercase mb-2 sm:mb-3 text-center">
                             {category.name}
                           </h4>
-                          <ul className="space-y-2 sm:space-y-2.5 max-h-[300px] sm:max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100">
+                          <ul className="space-y-1.5 sm:space-y-2 max-h-[200px] sm:max-h-[250px] md:max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100">
                             {category.links.map((link, linkIndex) => (
                               <li key={linkIndex}>
                                 <Link
                                   to={`/category/${encodeURIComponent(link)}`}
-                                  className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm md:text-base text-gray-700 hover:text-[#F97316] transition-colors group/link py-1.5 sm:py-2"
+                                  className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-[#F97316] transition-colors group/link py-1 sm:py-1.5"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-[#F97316] flex-shrink-0 group-hover/link:translate-x-1 transition-transform" />
-                                  <span className="flex-1">{link}</span>
+                                  <span className="flex-1 line-clamp-1">{link}</span>
                                 </Link>
                               </li>
                             ))}
                           </ul>
                           {/* Scroll Indicator */}
                           {category.links.length > 5 && (
-                            <div className="flex justify-center mt-3 sm:mt-4">
-                              <ChevronDown className="h-4 w-4 text-gray-400 animate-bounce" />
+                            <div className="flex justify-center mt-2 sm:mt-3">
+                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 animate-bounce" />
                             </div>
                           )}
                         </div>
@@ -346,23 +348,27 @@ const ProductCategoriesSection = () => {
             })}
           </div>
 
-          {/* Scroll Indicators */}
-          <div className="flex justify-center mt-4 sm:mt-6 space-x-2">
+          {/* Scroll Indicators - More visible on mobile for touch hint */}
+          <div className="flex justify-center mt-3 sm:mt-4 md:mt-5 gap-2">
             <div 
               className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
                 canScrollLeft 
-                  ? 'bg-[#F97316] scale-125 shadow-lg' 
+                  ? 'bg-[#F97316] scale-110 shadow-md' 
                   : 'bg-gray-300'
               }`}
+              aria-hidden="true"
             />
             <div 
               className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
                 canScrollRight 
-                  ? 'bg-[#F97316] scale-125 shadow-lg' 
+                  ? 'bg-[#F97316] scale-110 shadow-md' 
                   : 'bg-gray-300'
               }`}
+              aria-hidden="true"
             />
           </div>
+          {/* Mobile scroll hint */}
+          <p className="text-center text-xs text-gray-400 mt-2 md:hidden">← Glissez pour voir plus →</p>
         </div>
       </div>
 

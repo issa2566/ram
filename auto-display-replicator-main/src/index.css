@@ -140,11 +140,14 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
   }
 
   html {
     font-size: 16px; /* Base font size for rem calculations */
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   body {
@@ -156,7 +159,14 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    max-width: 100vw;
     letter-spacing: var(--letter-spacing-normal);
+  }
+  
+  /* Prevent horizontal scroll on all elements */
+  #root {
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   /* Ultra-Premium Typography - Luxury Automotive Style */

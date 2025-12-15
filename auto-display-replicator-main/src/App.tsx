@@ -8,8 +8,6 @@ import { SearchProvider } from "./contexts/SearchContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Catalogue from "./pages/Catalogue";
-import HuilesAuto from "./pages/HuilesAuto";
-import ProductDetail from "./pages/ProductDetail";
 import StockManagement from "./pages/StockManagement";
 import FiltresPage from "./pages/FiltresPage";
 import Sihem from "./pages/Sihem";
@@ -17,11 +15,19 @@ import FiltersCatalogue from "./pages/FiltersCatalogue";
 import AdminFiltersPage from "./pages/AdminFiltersPage";
 import FilterPage from "./pages/FilterPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import ProductsPage from "./pages/ProductsPage";
+import AdminProducts from "./pages/admin/AdminProducts";
+import Produits2 from "./pages/admin/Produits2";
 import Cart from "./pages/Cart";
 import NotFound from "./pages/NotFound";
 import BrandPartsPage from "./pages/BrandPartsPage";
 import CategoryPage from "./pages/CategoryPage";
 import SearchResults from "./pages/SearchResults";
+import Catalogue2 from "./pages/catalogue2";
+import PiecesDispo from "./pages/PiecesDispo";
+import Acha from "./pages/Acha";
+import Acha2 from "./pages/acha2";
+import HuilePage from "./pages/huile";
 import WhatsAppButton from "./components/WhatsAppButton";
 // Database initialization removed - using localStorage instead
 
@@ -36,6 +42,8 @@ const queryClient = new QueryClient({
         return failureCount < 3;
       },
       refetchOnWindowFocus: false,
+      // Disable stale time for subcategories - always fresh
+      staleTime: 0,
     },
     mutations: {
       retry: (failureCount, error) => {
@@ -48,6 +56,43 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Listen for subcategory/category updates and invalidate React Query cache
+if (typeof window !== 'undefined') {
+  // Same-tab events
+  window.addEventListener('subcategories-updated', () => {
+    console.log('🔄 React Query: Invalidating subcategories cache');
+    queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+  });
+  
+  window.addEventListener('categories-updated', () => {
+    console.log('🔄 React Query: Invalidating categories cache');
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+  });
+  
+  // Cross-tab communication via BroadcastChannel
+  try {
+    const subcategoriesChannel = new BroadcastChannel('subcategories-updates');
+    subcategoriesChannel.addEventListener('message', (event) => {
+      if (event.data?.type === 'refresh') {
+        console.log('🔄 React Query: Cross-tab subcategories refresh');
+        queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      }
+    });
+    
+    const categoriesChannel = new BroadcastChannel('categories-updates');
+    categoriesChannel.addEventListener('message', (event) => {
+      if (event.data?.type === 'refresh') {
+        console.log('🔄 React Query: Cross-tab categories refresh');
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+        queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      }
+    });
+  } catch (e) {
+    console.warn('BroadcastChannel not supported in App.tsx');
+  }
+}
 
 const App = () => {
   // App initialization - using localStorage for data persistence
@@ -88,39 +133,44 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
         <BrowserRouter
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true
           }}
         >
-        <SearchProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/catalogue" element={<Catalogue />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/huiles-auto" element={<HuilesAuto />} />
-            <Route path="/product-detail/:productId" element={<ProductDetail />} />
-            <Route path="/stock-management" element={<StockManagement />} />
-            <Route path="/filtres" element={<FiltresPage />} />
-            <Route path="/sihem" element={<Sihem />} />
-            <Route path="/filters-catalogue" element={<FiltersCatalogue />} />
-            <Route path="/admin-filters" element={<AdminFiltersPage />} />
-            <Route path="/filter/:filterId" element={<FilterPage />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/panier" element={<Cart />} />
-            <Route path="/brand/:brandName/parts" element={<BrandPartsPage />} />
-            <Route path="/category/:categoryName" element={<CategoryPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          {/* WhatsApp Floating Button - يظهر في جميع الصفحات */}
-          <WhatsAppButton />
-        </SearchProvider>
+          <SearchProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/catalogue" element={<Catalogue />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/stock-management" element={<StockManagement />} />
+              <Route path="/filtres" element={<FiltresPage />} />
+              <Route path="/sihem" element={<Sihem />} />
+              <Route path="/filters-catalogue" element={<FiltersCatalogue />} />
+              <Route path="/admin-filters" element={<AdminFiltersPage />} />
+              <Route path="/filter/:filterId" element={<FilterPage />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin-produits2" element={<Produits2 />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/panier" element={<Cart />} />
+              <Route path="/brand/:brandName/parts" element={<BrandPartsPage />} />
+              <Route path="/category/:categoryName" element={<CategoryPage />} />
+              <Route path="/catalogue2/:marque" element={<Catalogue2 />} />
+              <Route path="/pieces-dispo/:modelId" element={<PiecesDispo />} />
+              <Route path="/acha/:subId" element={<Acha />} />
+              <Route path="/acha2" element={<Acha2 />} />
+              <Route path="/huile" element={<HuilePage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            {/* WhatsApp Floating Button - يظهر في جميع الصفحات */}
+            <WhatsAppButton />
+          </SearchProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

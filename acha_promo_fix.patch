@@ -1,0 +1,242 @@
+=== backend/migrations/fix_price_column_type.js ===
+const { pool } = require('../config/database');
+
+async function fixPriceColumnType() {
+  console.log('🔧 [MIGRATION] Fixing price column type from TEXT to NUMERIC(12,3)...');
+  
+  let client;
+  try {
+    client = await pool.connect();
+    
+    await client.query(`
+      ALTER TABLE acha_products
+      ALTER COLUMN price TYPE NUMERIC(12,3)
+      USING price::NUMERIC
+    `);
+    
+    console.log('✅ [MIGRATION] Price column converted to NUMERIC(12,3)');
+    
+  } catch (error) {
+    if (error.message.includes('does not exist') || error.message.includes('already')) {
+      console.log('⚠️ [MIGRATION] Price column type migration skipped (already applied or column does not exist)');
+    } else {
+      console.error('🟥 [MIGRATION] ERROR:', error.message);
+      throw error;
+    }
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
+
+module.exports = fixPriceColumnType;
+
+=== backend/models/AchaProduct.js ===
+// ... existing code ...
+
+  static async create(productData) {
+    await this.ensureTable();
+    const {
+      sub_id,
+      name,
+      brand_name,
+      model_name,
+      description,
+      price,
+      images,
+      quantity,
+      product_references,
+      promotion_percentage,
+      promotion_price
+    } = productData;
+
+    let numericPrice = price !== undefined ? Number(price) : 0.000;
+    if (isNaN(numericPrice) || numericPrice === '' || numericPrice === null || numericPrice === undefined) {
+      numericPrice = 0.000;
+    }
+
+    let numericPromotionPercentage = promotion_percentage !== undefined ? Number(promotion_percentage) : 0;
+    if (isNaN(numericPromotionPercentage)) {
+      numericPromotionPercentage = 0;
+    }
+
+    let numericPromotionPrice = promotion_price !== undefined && promotion_price !== null && promotion_price !== '' ? Number(promotion_price) : null;
+    if (numericPromotionPrice !== null && isNaN(numericPromotionPrice)) {
+      numericPromotionPrice = null;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO acha_products (sub_id, name, brand_name, model_name, description, price, images, quantity, product_references, promotion_percentage, promotion_price)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [
+        sub_id,
+        name || '',
+        brand_name || null,
+        model_name || null,
+        description || '',
+        numericPrice,
+        images || [],
+        quantity || 0,
+        product_references || [],
+        numericPromotionPercentage,
+        numericPromotionPrice
+      ]
+    );
+    
+    return result.rows[0];
+  }
+
+  static async update(id, productData) {
+    await this.ensureTable();
+    
+    if (productData.price !== undefined) {
+      productData.price = Number(productData.price);
+      if (isNaN(productData.price) || productData.price === '' || productData.price === null || productData.price === undefined) {
+        productData.price = 0.000;
+      }
+    }
+
+    if (productData.promotion_percentage !== undefined) {
+      productData.promotion_percentage = Number(productData.promotion_percentage);
+      if (isNaN(productData.promotion_percentage)) {
+        productData.promotion_percentage = 0;
+      }
+    }
+
+    if (productData.promotion_price !== undefined) {
+      productData.promotion_price = Number(productData.promotion_price);
+      if (isNaN(productData.promotion_price) || productData.promotion_price === '' || productData.promotion_price === null) {
+        productData.promotion_price = null;
+      }
+    }
+
+    console.log("🔥 FINAL WRITE:", productData);
+
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    const fields = [
+      'name',
+      'brand_name',
+      'model_name',
+      'description',
+      'price',
+      'images',
+      'quantity',
+      'product_references',
+      'promotion_percentage',
+      'promotion_price'
+    ];
+
+    fields.forEach(field => {
+      if (productData[field] !== undefined) {
+        updates.push(`${field} = $${paramCount++}`);
+        values.push(productData[field]);
+      }
+    });
+
+    if (updates.length === 0) {
+      return await this.findById(id);
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+
+    const query = `UPDATE acha_products SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    
+    await pool.query(query, values);
+    
+    const fresh = await this.findById(id);
+    return fresh;
+  }
+
+// ... existing code ...
+
+=== backend/controllers/achaProductController.js ===
+// ... existing code ...
+
+  static async update(req, res) {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid product ID is required'
+        });
+      }
+      
+      const productExists = await AchaProduct.findById(id);
+      if (!productExists) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+      
+      if (updateData.price !== undefined) {
+        updateData.price = Number(updateData.price);
+        if (isNaN(updateData.price) || updateData.price === '' || updateData.price === null || updateData.price === undefined) {
+          updateData.price = 0.000;
+        }
+      }
+
+      if (updateData.promotion_percentage !== undefined) {
+        updateData.promotion_percentage = Number(updateData.promotion_percentage);
+        if (isNaN(updateData.promotion_percentage)) {
+          updateData.promotion_percentage = 0;
+        }
+      }
+
+      if (updateData.promotion_price !== undefined) {
+        updateData.promotion_price = Number(updateData.promotion_price);
+        if (isNaN(updateData.promotion_price) || updateData.promotion_price === '' || updateData.promotion_price === null) {
+          updateData.promotion_price = null;
+        }
+      }
+      
+      const product = await AchaProduct.update(id, updateData);
+      
+      res.set({
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      });
+      
+      const fresh = await AchaProduct.findById(id);
+      
+      res.status(200).json({
+        success: true,
+        data: fresh
+      });
+    } catch (error) {
+      console.error('❌ Error in update:', error.message);
+      res.set({
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update product'
+      });
+    }
+  }
+
+// ... existing code ...
+
+=== backend/server.js ===
+// ... existing code ...
+
+      // 🔥 AUTO-FIX: Fix price column type
+      try {
+        await fixPriceColumnType();
+      } catch (migrationError) {
+        console.error('⚠️ Fix price column type migration had issues (continuing anyway)');
+      }
+
+// ... existing code ...

@@ -4,8 +4,16 @@
  * API calls for image upload operations.
  */
 
-import api from './api';
-import type { ImageUploadResult } from '../types/common';
+export interface ImageUploadResult {
+  success: boolean;
+  url: string;
+  filename: string;
+  path: string;
+  size: number;
+  mimetype: string;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 /**
  * Upload image file
@@ -17,27 +25,82 @@ export const uploadImage = async (
   const formData = new FormData();
   formData.append('image', file);
 
-  const response = await api.post<ImageUploadResult>('/upload/image', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
-        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        onProgress(percent);
-      }
-    },
-  });
+  // Use XMLHttpRequest for upload progress tracking
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
 
-  return response.data.url;
+    // Track upload progress
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded * 100) / e.total);
+          onProgress(percent);
+        }
+      });
+    }
+
+    // Handle response
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          
+          if (!result.success) {
+            reject(new Error(result.error || 'Upload failed'));
+            return;
+          }
+
+          // Backend returns { success: true, data: { url, ... } }
+          const imageUrl = result.data?.url || result.url;
+          if (!imageUrl) {
+            reject(new Error('No image URL in response'));
+            return;
+          }
+
+          resolve(imageUrl);
+        } catch (error) {
+          reject(new Error('Failed to parse response'));
+        }
+      } else {
+        try {
+          const errorData = JSON.parse(xhr.responseText);
+          reject(new Error(errorData.error || `Upload failed: ${xhr.statusText}`));
+        } catch {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      }
+    });
+
+    // Handle errors
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during upload'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload aborted'));
+    });
+
+    // Send request
+    xhr.open('POST', `${API_BASE_URL}/upload/image`);
+    xhr.send(formData);
+  });
 };
 
 /**
  * Delete image
  */
-export const deleteImage = async (url: string): Promise<void> => {
-  await api.delete('/upload/image', {
-    data: { url },
+export const deleteImage = async (url: string, filename?: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/upload/image`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url, filename }),
   });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to delete image');
+  }
 };
 

@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BrandsSection from "@/components/BrandsSection";
 import PromotionsSection from "@/components/PromotionsSection";
-import ProductCategoriesSection from "@/components/ProductCategoriesSection";
+import FamilleSection from "@/components/home/FamilleSection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -15,25 +15,37 @@ const Index = () => {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+
+    // Clear all breadcrumb data when visiting homepage
+    localStorage.removeItem("selectedBrand");
+    localStorage.removeItem("selectedModel");
+    localStorage.removeItem("selected_marque");
+    localStorage.removeItem("selected_modele");
+    localStorage.removeItem("breadcrumb_catalogue");
+    localStorage.removeItem("breadcrumb_catalogue2");
+    localStorage.removeItem("breadcrumb_pieces");
+    localStorage.removeItem("breadcrumb_product");
   }, []);
 
   return (
-    <div className="min-h-screen bg-background no-scroll-x">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
       <Header />
       
       {/* Welcome Message */}
       {user && (
-        <div className="bg-orange-500 text-white py-3 px-4 md:py-4 md:px-6 lg:py-5 lg:px-8 text-center">
-          <p className="text-responsive-sm md:text-base lg:text-lg xl:text-xl font-medium">
+        <div className="bg-orange-500 text-white py-2 px-3 sm:py-3 sm:px-4 md:py-4 md:px-6 text-center w-full">
+          <p className="text-xs sm:text-sm md:text-base lg:text-lg font-medium truncate">
             Welcome back, {user.username}! You are logged in as {user.role}.
           </p>
         </div>
       )}
       
-      <HeroSection />
-      <BrandsSection />
-      <ProductCategoriesSection />
-      <PromotionsSection />
+      <main className="w-full max-w-full overflow-x-hidden">
+        <BrandsSection />
+        <HeroSection />
+        <FamilleSection />
+        <PromotionsSection />
+      </main>
       <Footer />
     </div>
   );

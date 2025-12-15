@@ -323,7 +323,7 @@ const CategoryPage = () => {
                         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                           <div 
                             className="w-full h-full flex items-center justify-center cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                            onClick={() => navigate(`/product-detail/${product.id}`)}
+                            onClick={() => navigate('/catalogue')}
                           >
                             {product.image ? (
                               <img 
@@ -454,7 +454,7 @@ const CategoryPage = () => {
                               
                               {/* CTA Row */}
                               <button
-                                onClick={() => navigate(`/product-detail/${product.id}`)}
+                                onClick={() => navigate('/catalogue')}
                                 className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl px-4 py-2.5 sm:py-3 transition-all duration-300 hover:shadow-lg"
                               >
                                 Voir détails

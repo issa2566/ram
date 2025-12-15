@@ -45,27 +45,31 @@ const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
     { label: 'الرئيسية', path: '/', icon: Home },
     { label: 'الكتالوج', path: '/catalogue', icon: Package },
     { label: 'الفلاتر', path: '/filtres', icon: Filter },
-    { label: 'الزيوت', path: '/huiles-auto', icon: Droplets },
     { label: 'قطع الغيار', path: '/brand-parts', icon: Wrench },
     { label: 'اتصل بنا', path: '/contact', icon: Phone },
   ];
 
   return (
     <>
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Overlay - Smooth fade animation */}
       <div
-        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-50 transform 
-                   transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+        aria-hidden={!isOpen}
+      />
+
+      {/* Sidebar - Smooth sliding animation with max-width for small screens */}
+      <div
+        className={`fixed top-0 right-0 h-full w-[85vw] max-w-[320px] sm:w-80 bg-white shadow-xl z-50 
+                   transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] lg:hidden 
+                   overflow-y-auto overflow-x-hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">

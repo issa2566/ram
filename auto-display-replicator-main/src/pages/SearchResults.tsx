@@ -159,7 +159,7 @@ const SearchResults = () => {
                         <div
                           key={product.id}
                           className="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer relative"
-                          onClick={() => navigate(`/product-detail/${product.id}`)}
+                          onClick={() => navigate('/catalogue')}
                         >
                           {/* Match Type Badge */}
                           <div className={`absolute top-2 right-2 z-10 px-2 py-1 rounded text-xs font-medium ${getMatchTypeColor(result.matchType)}`}>
@@ -217,7 +217,7 @@ const SearchResults = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/product-detail/${product.id}`);
+                                navigate('/catalogue');
                               }}
                               className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl px-4 py-2.5 sm:py-3 transition-all duration-300 hover:shadow-lg"
                             >

@@ -11,11 +11,17 @@ const DEFAULT_BRANDS: BrandImagesData = {
 };
 
 // Backend base URL for static files
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '') || 'http://localhost:3000';
+const getBackendUrl = (): string => {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
+    throw new Error('VITE_API_BASE_URL environment variable is required in production.');
+  })());
+  return apiUrl.replace(/\/api\/?$/, '');
+};
+const BACKEND_URL = getBackendUrl();
 
 /**
  * Convert relative image path to full URL
- * /brands/file.png → http://localhost:3000/brands/file.png
+ * /brands/file.png → {BACKEND_URL}/brands/file.png
  */
 const getFullImageUrl = (imagePath: string | undefined | null): string => {
   if (!imagePath) return '/pp.jpg';

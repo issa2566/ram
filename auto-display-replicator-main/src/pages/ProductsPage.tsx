@@ -52,7 +52,9 @@ const ProductsPage: React.FC = () => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
+        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
+      })());
       const response = await fetch(`${API_BASE_URL}/dashboard-products/${id}`, {
         method: 'DELETE',
         headers: {

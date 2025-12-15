@@ -6,9 +6,26 @@
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
+// Get API base URL with development fallback
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Development fallback
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ VITE_API_BASE_URL not set. Using default: http://localhost:5000/api');
+    console.warn('   Create a .env file with: VITE_API_BASE_URL=http://localhost:5000/api');
+    return 'http://localhost:5000/api';
+  }
+  
+  // Production build: fail fast
+  throw new Error('VITE_API_BASE_URL environment variable is required in production. Please set it in your .env file.');
+};
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://69.169.108.182:3000/api',
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

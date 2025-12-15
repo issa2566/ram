@@ -12,6 +12,7 @@ const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
   console.error(`[DB] Missing required environment variables: ${missingVars.join(', ')}`);
   console.error('[DB] Please set these in your .env file');
+  throw new Error(`Missing required database environment variables: ${missingVars.join(', ')}`);
 }
 
 const pool = new Pool({

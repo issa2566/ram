@@ -13,7 +13,18 @@ export interface ImageUploadResult {
   mimetype: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ VITE_API_BASE_URL not set. Using default: http://localhost:5000/api');
+    return 'http://localhost:5000/api';
+  }
+  throw new Error('VITE_API_BASE_URL environment variable is required in production.');
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Upload image file

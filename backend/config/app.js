@@ -5,10 +5,29 @@
 
 require('dotenv').config();
 
+// Validate and normalize PORT
+const getPort = () => {
+  const envPort = process.env.PORT;
+  
+  if (!envPort) {
+    console.warn('⚠️  PORT environment variable not set. Using default: 5000');
+    return 5000;
+  }
+  
+  const port = parseInt(envPort, 10);
+  
+  if (isNaN(port) || port < 1 || port > 65535) {
+    console.warn(`⚠️  Invalid PORT value "${envPort}". Using default: 5000`);
+    return 5000;
+  }
+  
+  return port;
+};
+
 module.exports = {
-  port: process.env.PORT || 3000,
+  port: getPort(),
   nodeEnv: process.env.NODE_ENV || 'development',
-  apiBaseUrl: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
+  apiBaseUrl: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`,
   
   // Database
   db: {
@@ -28,7 +47,19 @@ module.exports = {
   
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (() => {
+      if (process.env.NODE_ENV === 'production') {
+        if (!process.env.CORS_ORIGIN) {
+          throw new Error('CORS_ORIGIN environment variable is required in production');
+        }
+        // Support comma-separated origins
+        return process.env.CORS_ORIGIN.includes(',') 
+          ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+          : process.env.CORS_ORIGIN;
+      }
+      // Development: allow all origins
+      return '*';
+    })(),
     credentials: true
   }
 };

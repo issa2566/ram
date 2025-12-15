@@ -53,11 +53,13 @@ const upload = multer({
   }
 });
 
-// Admin check middleware (simplified for development)
+// Admin check middleware (temporary protection layer)
 const isAdmin = (req, res, next) => {
-  // TODO: Implement proper admin authentication
-  // For now, allow all requests
-  return next();
+  // Temporary: reject all requests until proper authentication is implemented
+  return res.status(403).json({
+    success: false,
+    error: 'Admin authentication required. Please implement proper authentication.'
+  });
 };
 
 // Error handling middleware for multer

@@ -1,9 +1,27 @@
 // Database API - PostgreSQL Backend
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// In production build, VITE_API_BASE_URL is required
+// In development, use localhost fallback with warning
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Development fallback
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ VITE_API_BASE_URL not set. Using default: http://localhost:5000/api');
+    console.warn('   Create a .env file with: VITE_API_BASE_URL=http://localhost:5000/api');
+    return 'http://localhost:5000/api';
+  }
+  
+  // Production build: fail fast
+  throw new Error('VITE_API_BASE_URL environment variable is required in production. Please set it in your .env file.');
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Base URL for static files (without /api)
 const getStaticBaseUrl = (): string => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+  const apiUrl = API_BASE_URL;
   // Remove /api suffix to get base URL for static files
   return apiUrl.replace(/\/api\/?$/, '');
 };

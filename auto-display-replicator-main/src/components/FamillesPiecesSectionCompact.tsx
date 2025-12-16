@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { refreshCategoriesGlobally } from "@/api/database";
+import { getApiBaseUrl, getBackendBaseUrl } from "@/utils/apiConfig";
 
 interface PartFamily {
   name: string;
@@ -60,9 +61,7 @@ const FamillesPiecesSectionCompact = () => {
   const refreshSubcategoriesFromServer = useCallback(async () => {
     console.log('🔄 Force refreshing subcategories from server...');
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const apiBase = getApiBaseUrl();
       const timestamp = Date.now(); // Cache buster
       const response = await fetch(`${apiBase}/subcategories?t=${timestamp}`, {
         cache: 'no-store',
@@ -118,9 +117,7 @@ const FamillesPiecesSectionCompact = () => {
   useEffect(() => {
     const loadSubcategoriesFromDatabase = async () => {
       try {
-        const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+        const apiBase = getApiBaseUrl();
         const timestamp = Date.now(); // Cache buster
         const response = await fetch(`${apiBase}/subcategories?t=${timestamp}`, {
           cache: 'no-store',
@@ -257,9 +254,7 @@ const FamillesPiecesSectionCompact = () => {
 
       console.log(`📤 Uploading image for "${subcategoryName}" in family "${actualFamilyName}"`);
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const apiBase = getApiBaseUrl();
       const response = await fetch(`${apiBase}/subcategories/upload-image`, {
         method: 'POST',
         body: formData,
@@ -315,11 +310,7 @@ const FamillesPiecesSectionCompact = () => {
 
     if (imageUrl.startsWith("http")) return imageUrl;
 
-    const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-      throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-    })())
-                  .replace("/api", "");
-
+    const base = getBackendBaseUrl();
     return `${base}${imageUrl}`;
   };
 
@@ -544,9 +535,7 @@ const FamillesPiecesSectionCompact = () => {
     setAddingLoading(true);
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const apiBase = getApiBaseUrl();
 
       // Step 1: Upload image WITH family_name to persist the relationship
       const formData = new FormData();

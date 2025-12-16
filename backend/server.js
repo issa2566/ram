@@ -114,16 +114,46 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+// Health check endpoint - MUST always respond, even if database is down
+// This allows load balancers and monitoring to check server availability
+app.get('/health', async (req, res) => {
+  try {
+    // Quick database ping (non-blocking, timeout after 2 seconds)
+    let dbStatus = 'unknown';
+    try {
+      const quickTest = await Promise.race([
+        testConnection(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+      ]);
+      dbStatus = quickTest.success ? 'connected' : 'disconnected';
+    } catch (err) {
+      dbStatus = 'timeout';
     }
-  });
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: dbStatus,
+        environment: process.env.NODE_ENV || 'development'
+      }
+    });
+  } catch (error) {
+    // Health check should never fail - return basic status even on error
+    res.status(200).json({
+      success: true,
+      data: {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: 'unknown',
+        environment: process.env.NODE_ENV || 'development',
+        warning: 'Health check query failed but server is running'
+      }
+    });
+  }
 });
 
 // API root endpoint
@@ -198,14 +228,17 @@ console.log("✅ DashboardProducts routes mounted at /api/dashboard-products");
 // REMOVED: Legacy routes without /api prefix (duplicates removed for localhost cleanup)
 // All routes are now accessed via /api/* prefix only
 
-// Serve React app build files (if dist folder exists - for production)
+// Serve React app build files ONLY in development mode
+// In production, Nginx should serve static files - backend only handles API
 const distPath = path.join(__dirname, '../auto-display-replicator-main/dist');
-if (fs.existsSync(distPath)) {
-  console.log('📁 Serving React app build files from:', distPath);
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (fs.existsSync(distPath) && !isProduction) {
+  console.log('📁 [DEV] Serving React app build files from:', distPath);
   // Serve static files from dist
   app.use(express.static(distPath));
   
-  // SPA fallback: serve index.html for all non-API routes
+  // SPA fallback: serve index.html for all non-API routes (development only)
   app.get('*', (req, res, next) => {
     // Skip API routes and static file routes
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/brands') || req.path.startsWith('/hero') || req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path.startsWith('/upload') || req.path.startsWith('/products') || req.path.startsWith('/searchOptions') || req.path.startsWith('/carBrands') || req.path.startsWith('/vehicles') || req.path.startsWith('/vehicleModels') || req.path.startsWith('/models') || req.path.startsWith('/parts') || req.path.startsWith('/acha-products') || req.path.startsWith('/subcategories')) {
@@ -214,6 +247,8 @@ if (fs.existsSync(distPath)) {
     // Serve index.html for all other routes (SPA routing)
     res.sendFile(path.join(distPath, 'index.html'));
   });
+} else if (isProduction && fs.existsSync(distPath)) {
+  console.log('📁 [PROD] Frontend dist folder exists but will be served by Nginx, not Node.js');
 }
 
 // 404 handler (only for API routes)
@@ -231,8 +266,27 @@ app.use(errorHandler);
 // Start server with port conflict handling
 async function startServer() {
   try {
-    // PHASE 1: Load environment variables (already done via require('dotenv'))
-    console.log('📋 Environment loaded');
+    // PHASE 1: Load and validate environment variables
+    console.log('📋 Loading environment variables...');
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    const isProduction = nodeEnv === 'production';
+    
+    // Validate required environment variables
+    const requiredVars = ['DB_USER', 'DB_NAME', 'DB_PASSWORD'];
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      console.error('❌ Missing required environment variables:', missingVars.join(', '));
+      console.error('   Please set these in your .env file');
+      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+    
+    if (isProduction && !process.env.CORS_ORIGIN) {
+      console.warn('⚠️  CORS_ORIGIN not set in production. CORS may fail.');
+      console.warn('   Set CORS_ORIGIN in .env (e.g., CORS_ORIGIN=https://yourdomain.com)');
+    }
+    
+    console.log('✅ Environment variables validated');
     
     // PHASE 2: Connect to database (FAIL if error)
     console.log('🔄 Connecting to database...');
@@ -253,28 +307,39 @@ async function startServer() {
     await migrate();
     console.log('✅ Database migration completed');
     
-    // PHASE 4: Start server
+    // PHASE 4: Start server - ALWAYS listen on 0.0.0.0 for production
     const host = process.env.HOST || '0.0.0.0';
     
     console.log('\n🚀 Starting server...');
-    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   Environment: ${nodeEnv}`);
     console.log(`   Port: ${port}`);
-    console.log(`   Host: ${host}`);
+    console.log(`   Host: ${host} (listening on all interfaces)`);
+    if (isProduction) {
+      console.log(`   CORS Origin: ${process.env.CORS_ORIGIN || 'NOT SET (WARNING)'}`);
+    }
     
     const server = app.listen(port, host, () => {
       console.log(`\n✅ Server running on ${host}:${port}`);
-      console.log(`📍 API URL: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
-      console.log(`📍 Health check: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/health`);
-      console.log(`📍 Database: ${process.env.DB_NAME || 'not configured'}`);
-      console.log('\n📋 Available API endpoints:');
-      console.log('   - GET  /api/vehicles       → List all vehicles');
-      console.log('   - POST /api/vehicles       → Create vehicle');
-      console.log('   - GET  /api/vehicles/:id   → Get vehicle');
-      console.log('   - PUT  /api/vehicles/:id   → Update vehicle');
-      console.log('   - DELETE /api/vehicles/:id → Delete vehicle');
-      console.log('   - GET  /api/carBrands      → List car brands');
-      console.log('   - GET  /api/searchOptions  → List search options');
-      console.log('   - GET  /api/products       → List products');
+      // Don't show localhost in production logs - use actual hostname or IP
+      const displayHost = host === '0.0.0.0' 
+        ? (isProduction ? '0.0.0.0 (all interfaces)' : 'localhost')
+        : host;
+      console.log(`📍 API URL: http://${displayHost}:${port}`);
+      console.log(`📍 Health check: http://${displayHost}:${port}/health`);
+      console.log(`📍 Database: ${process.env.DB_NAME}`);
+      if (isProduction) {
+        console.log('\n📋 Production mode - API endpoints available at /api/*');
+      } else {
+        console.log('\n📋 Available API endpoints:');
+        console.log('   - GET  /api/vehicles       → List all vehicles');
+        console.log('   - POST /api/vehicles       → Create vehicle');
+        console.log('   - GET  /api/vehicles/:id   → Get vehicle');
+        console.log('   - PUT  /api/vehicles/:id   → Update vehicle');
+        console.log('   - DELETE /api/vehicles/:id → Delete vehicle');
+        console.log('   - GET  /api/carBrands      → List car brands');
+        console.log('   - GET  /api/searchOptions  → List search options');
+        console.log('   - GET  /api/products       → List products');
+      }
     });
 
     // Handle server errors - NO AUTO-SWITCH

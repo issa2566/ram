@@ -1,61 +1,10 @@
 // Database API - PostgreSQL Backend
-// In production build, VITE_API_BASE_URL is required
-// In development, use localhost fallback with warning
-const getApiBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  
-  // Development fallback
-  if (import.meta.env.DEV) {
-    console.warn('⚠️ VITE_API_BASE_URL not set. Using default: http://localhost:5000/api');
-    console.warn('   Create a .env file with: VITE_API_BASE_URL=http://localhost:5000/api');
-    return 'http://localhost:5000/api';
-  }
-  
-  // Production build: fail fast
-  throw new Error('VITE_API_BASE_URL environment variable is required in production. Please set it in your .env file.');
-};
+import { getApiBaseUrl, getBackendBaseUrl, resolveImageUrl as resolveImageUrlUtil } from '@/utils/apiConfig';
 
 export const API_BASE_URL = getApiBaseUrl();
 
-// Base URL for static files (without /api)
-const getStaticBaseUrl = (): string => {
-  const apiUrl = API_BASE_URL;
-  // Remove /api suffix to get base URL for static files
-  return apiUrl.replace(/\/api\/?$/, '');
-};
-
-/**
- * Resolve image URL to full path
- * Handles: /brands/file.png, /hero/file.png, /uploads/file.png, etc.
- */
-export const resolveImageUrl = (path: string | undefined | null): string => {
-  if (!path) return '/pp.jpg';
-  
-  // Already a full URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
-  }
-  
-  // Data URL (base64)
-  if (path.startsWith('data:')) {
-    return path;
-  }
-  
-  // Relative path starting with / 
-  if (path.startsWith('/')) {
-    // Backend-served paths that need full URL
-    if (path.startsWith('/brands/') || path.startsWith('/hero/') || path.startsWith('/uploads/')) {
-      return `${getStaticBaseUrl()}${path}`;
-    }
-    // Public folder assets (e.g., /pp.jpg, /k.png) - keep as-is
-    return path;
-  }
-  
-  // Just a filename - assume it's a brand image
-  return `${getStaticBaseUrl()}/brands/${path}`;
-};
+// Re-export for backward compatibility
+export const resolveImageUrl = resolveImageUrlUtil;
 
 export interface ProductData {
   id?: string;

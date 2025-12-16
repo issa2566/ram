@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Package, ArrowLeft } from 'lucide-react';
 import { getDashboardProducts, DashboardProductData } from '@/api/database';
+import { getApiBaseUrl } from '@/utils/apiConfig';
 
 const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,9 +53,7 @@ const ProductsPage: React.FC = () => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(`${API_BASE_URL}/dashboard-products/${id}`, {
         method: 'DELETE',
         headers: {

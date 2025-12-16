@@ -10,47 +10,12 @@ const DEFAULT_BRANDS: BrandImagesData = {
   updatedAt: new Date().toISOString()
 };
 
-// Backend base URL for static files
-const getBackendUrl = (): string => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-    throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-  })());
-  return apiUrl.replace(/\/api\/?$/, '');
-};
-const BACKEND_URL = getBackendUrl();
+import { getBackendBaseUrl, resolveImageUrl } from '@/utils/apiConfig';
 
-/**
- * Convert relative image path to full URL
- * /brands/file.png → {BACKEND_URL}/brands/file.png
- */
-const getFullImageUrl = (imagePath: string | undefined | null): string => {
-  if (!imagePath) return '/pp.jpg';
-  
-  // Already a full URL - return as-is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // Data URL - return as-is
-  if (imagePath.startsWith('data:')) {
-    return imagePath;
-  }
-  
-  // Backend paths - prepend base URL
-  if (imagePath.startsWith('/brands/') || imagePath.startsWith('/hero/') || imagePath.startsWith('/uploads/')) {
-    const fullUrl = `${BACKEND_URL}${imagePath}`;
-    console.log('🔗 Converting path:', imagePath, '→', fullUrl);
-    return fullUrl;
-  }
-  
-  // Public assets like /pp.jpg - return as-is
-  if (imagePath.startsWith('/')) {
-    return imagePath;
-  }
-  
-  // Just filename - assume brands folder
-  return `${BACKEND_URL}/brands/${imagePath}`;
-};
+const BACKEND_URL = getBackendBaseUrl();
+
+// Use centralized image URL resolver
+const getFullImageUrl = resolveImageUrl;
 
 const BrandsSection = () => {
   const [isAdmin, setIsAdmin] = useState(false);

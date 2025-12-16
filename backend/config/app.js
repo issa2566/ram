@@ -24,10 +24,28 @@ const getPort = () => {
   return port;
 };
 
+// Production environment validation
+const nodeEnv = process.env.NODE_ENV || 'development';
+const isProduction = nodeEnv === 'production';
+
+// Validate production environment variables
+if (isProduction) {
+  const requiredProdVars = ['CORS_ORIGIN'];
+  const missingProdVars = requiredProdVars.filter(varName => !process.env[varName]);
+  
+  if (missingProdVars.length > 0) {
+    console.error(`[CONFIG] Missing required production environment variables: ${missingProdVars.join(', ')}`);
+    console.error(`[CONFIG] Server will start but CORS may fail. Set these in your .env file.`);
+    // Don't throw - allow server to start but log warning
+  }
+}
+
 module.exports = {
   port: getPort(),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  apiBaseUrl: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`,
+  nodeEnv: nodeEnv,
+  // Remove localhost reference - API base URL should be set by frontend, not backend
+  // Backend doesn't need to know its own public URL
+  apiBaseUrl: process.env.API_BASE_URL || (isProduction ? null : `http://localhost:${getPort()}`),
   
   // Database
   db: {
@@ -45,14 +63,17 @@ module.exports = {
     directory: 'uploads'
   },
   
-  // CORS
+  // CORS - Production requires explicit origin, development allows all
   cors: {
     origin: (() => {
-      if (process.env.NODE_ENV === 'production') {
+      if (isProduction) {
         if (!process.env.CORS_ORIGIN) {
-          throw new Error('CORS_ORIGIN environment variable is required in production');
+          // Log warning but don't throw - allows health check to work
+          console.warn('[CORS] WARNING: CORS_ORIGIN not set in production. CORS requests may fail.');
+          console.warn('[CORS] Set CORS_ORIGIN in .env (e.g., CORS_ORIGIN=https://yourdomain.com)');
+          return '*'; // Fallback to allow all (less secure but allows server to start)
         }
-        // Support comma-separated origins
+        // Support comma-separated origins for multiple frontend domains
         return process.env.CORS_ORIGIN.includes(',') 
           ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
           : process.env.CORS_ORIGIN;

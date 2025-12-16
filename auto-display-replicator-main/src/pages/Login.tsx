@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { User, Lock, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { getApiBaseUrl } from "@/utils/apiConfig";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,9 +22,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -63,9 +62,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : (() => {
-        throw new Error('VITE_API_BASE_URL environment variable is required in production.');
-      })());
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {

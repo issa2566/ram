@@ -12,27 +12,8 @@ const path = require('path');
 const fs = require('fs');
 const { port, cors: corsConfig } = require('./config/app');
 const { pool, testConnection } = require('./config/database');
-const { initializeTables } = require('./db/initTables');
+const migrate = require('./db/migrate');
 const errorHandler = require('./middlewares/errorHandler');
-
-// 🔥 AUTO-FIX MIGRATION: Fix acha_products schema at startup
-const fixAchaProductsSchema = require('./migrations/fix_acha_products_schema');
-
-// 🔥 AUTO-FIX MIGRATION: Add missing columns (brand_name, model_name) to acha_products
-const fixMissingAchaColumns = require('./migrations/fix_missing_acha_columns');
-
-// 🔥 AUTO-FIX MIGRATION: Add promotion_percentage column to acha_products
-const addPromotionPercentage = require('./migrations/add_promotion_percentage');
-// 🔥 AUTO-FIX MIGRATION: Add promotion_price column to acha_products
-const addPromotionPrice = require('./migrations/add_promotion_price');
-// 🔥 AUTO-FIX MIGRATION: Convert price column from TEXT to NUMERIC(12,3)
-const convertPriceToNumeric = require('./migrations/convert_price_to_numeric');
-// 🔥 AUTO-FIX MIGRATION: Fix price column type
-const fixPriceColumnType = require('./migrations/fix_price_column_type');
-// 🔥 COMPREHENSIVE MIGRATION: Fix entire Acha promotion system (price + promotion columns)
-const fixAchaPromotionSystem = require('./migrations/fix_acha_promotion_system');
-// 🔥 MIGRATION: Add quantity column to dashboard_products
-const addQuantityToDashboardProducts = require('./migrations/add_quantity_to_dashboard_products');
 
 // Import routes
 const authRouter = require('./routes/auth');
@@ -214,23 +195,8 @@ app.get('/', (req, res) => {
 
 console.log("✅ DashboardProducts routes mounted at /api/dashboard-products");
 
-// Legacy routes without /api prefix (for backward compatibility)
-app.use('/auth', authRouter);
-app.use('/users', usersRouter);
-app.use('/upload', uploadRouter);
-app.use('/products', productsRouter);
-app.use('/searchOptions', searchOptionsRouter);
-app.use('/carBrands', carBrandsRouter);
-app.use('/vehicles', vehiclesRouter);
-app.use('/vehicleModels', vehicleModelsRouter);
-app.use('/models', modelPartsRouter);
-app.use('/parts', partsRouter);
-app.use('/acha-products', achaProductsRouter);
-app.use('/hero', heroRouter);
-app.use('/brands', brandsRouter);
-app.use('/subcategories', subcategoriesRouter);
-// OLD dashboard-products route removed - using new PostgreSQL-based route at /api/dashboard-products
-// app.use('/dashboard-products', dashboardProductsRouter);
+// REMOVED: Legacy routes without /api prefix (duplicates removed for localhost cleanup)
+// All routes are now accessed via /api/* prefix only
 
 // Serve React app build files (if dist folder exists - for production)
 const distPath = path.join(__dirname, '../auto-display-replicator-main/dist');
@@ -265,184 +231,67 @@ app.use(errorHandler);
 // Start server with port conflict handling
 async function startServer() {
   try {
-    // Test database connection
-    console.log('🔄 Testing database connection...');
+    // PHASE 1: Load environment variables (already done via require('dotenv'))
+    console.log('📋 Environment loaded');
+    
+    // PHASE 2: Connect to database (FAIL if error)
+    console.log('🔄 Connecting to database...');
     const dbTest = await testConnection();
     
     if (!dbTest.success) {
-      console.error('❌ Database connection failed. Server will start but database operations will fail.');
-      console.error('   Error:', dbTest.error);
-    } else {
-      console.log('✅ Database connection successful');
-      
-      // 🔥 AUTO-FIX: Run acha_products schema migration FIRST
-      try {
-        await fixAchaProductsSchema();
-      } catch (migrationError) {
-        console.error('❌ Acha products schema migration FAILED:');
-        console.error('   Error:', migrationError.message);
-        console.error('   Stack:', migrationError.stack);
-        throw new Error(`Migration failed: acha_products schema - ${migrationError.message}`);
+      console.error('❌ Database connection FAILED');
+      console.error(`   Error: ${dbTest.error}`);
+      if (dbTest.code) {
+        console.error(`   Code: ${dbTest.code}`);
       }
-      
-      // 🔥 AUTO-FIX: Add missing columns (brand_name, model_name) to acha_products
-      try {
-        await fixMissingAchaColumns();
-      } catch (migrationError) {
-        console.error('❌ Missing columns migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: missing columns - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Add promotion_percentage column to acha_products
-      try {
-        await addPromotionPercentage();
-      } catch (migrationError) {
-        console.error('❌ Promotion percentage migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: promotion percentage - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Add promotion_price column to acha_products
-      try {
-        await addPromotionPrice();
-      } catch (migrationError) {
-        console.error('❌ Promotion price migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: promotion price - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Add Acha2 fields (quantity2, description2, price2, references2, images2)
-      try {
-        const addAcha2Fields = require('./migrations/add_acha2_fields');
-        await addAcha2Fields();
-      } catch (migrationError) {
-        console.error('❌ Acha2 fields migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: acha2 fields - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Create acha2_products table
-      try {
-        const createAcha2ProductsTable = require('./migrations/create_acha2_products_table');
-        await createAcha2ProductsTable();
-      } catch (migrationError) {
-        console.error('❌ Acha2 products table migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: acha2 products table - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Create global_settings table
-      try {
-        const createGlobalSettingsTable = require('./migrations/create_global_settings_table');
-        await createGlobalSettingsTable();
-      } catch (migrationError) {
-        console.error('❌ Global settings table migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: global settings table - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Convert price column from TEXT to NUMERIC(12,3)
-      try {
-        await convertPriceToNumeric();
-      } catch (migrationError) {
-        console.error('❌ Price to numeric migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: price to numeric - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Fix price column type
-      try {
-        await fixPriceColumnType();
-      } catch (migrationError) {
-        console.error('❌ Fix price column type migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: fix price column type - ${migrationError.message}`);
-      }
-      
-      // 🔥 COMPREHENSIVE FIX: Run unified migration for entire promotion system
-      // This migration handles: price conversion, promotion_percentage, promotion_price
-      try {
-        await fixAchaPromotionSystem();
-      } catch (migrationError) {
-        console.error('❌ Comprehensive promotion system migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: promotion system - ${migrationError.message}`);
-      }
-      
-      // 🔥 AUTO-FIX: Add quantity column to dashboard_products
-      try {
-        await addQuantityToDashboardProducts();
-      } catch (migrationError) {
-        console.error('❌ Add quantity to dashboard_products migration FAILED:', migrationError.message);
-        throw new Error(`Migration failed: add quantity to dashboard_products - ${migrationError.message}`);
-      }
-      
-      // Initialize all database tables BEFORE starting the server
-      console.log('🔄 Initializing database tables...');
-      const initResult = await initializeTables(pool);
-      
-      if (!initResult.success) {
-        console.error('❌ Database table initialization FAILED');
-        throw new Error('Failed to initialize database tables');
-      }
+      throw new Error(`Database connection failed: ${dbTest.error}`);
     }
-
-    // Start the server with automatic port fallback
-    const host = process.env.HOST || '0.0.0.0';
-    const requestedPort = port;
-    let actualPort = port;
+    console.log('✅ Database connection successful');
     
-    // Log startup information
+    // PHASE 3: Run database migration (FAIL if error)
+    console.log('🔄 Running database migration...');
+    await migrate();
+    console.log('✅ Database migration completed');
+    
+    // PHASE 4: Start server
+    const host = process.env.HOST || '0.0.0.0';
+    
     console.log('\n🚀 Starting server...');
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   Port: ${port}`);
     console.log(`   Host: ${host}`);
     
-    const startServerOnPort = (portToUse) => {
-      return new Promise((resolve, reject) => {
-        const server = app.listen(portToUse, host, () => {
-          actualPort = portToUse;
-          console.log(`\n✅ Server running on ${host}:${actualPort}`);
-          if (actualPort !== requestedPort) {
-            console.log(`⚠️  Note: Port ${requestedPort} was in use, using port ${actualPort} instead`);
-          }
-          console.log(`📍 API URL: http://${host === '0.0.0.0' ? 'localhost' : host}:${actualPort}`);
-          console.log(`📍 Health check: http://${host === '0.0.0.0' ? 'localhost' : host}:${actualPort}/health`);
-          console.log(`📍 Database: ${process.env.DB_NAME || 'not configured'}`);
-          console.log('\n📋 Available API endpoints:');
-          console.log('   - GET  /api/vehicles       → List all vehicles');
-          console.log('   - POST /api/vehicles       → Create vehicle');
-          console.log('   - GET  /api/vehicles/:id   → Get vehicle');
-          console.log('   - PUT  /api/vehicles/:id   → Update vehicle');
-          console.log('   - DELETE /api/vehicles/:id → Delete vehicle');
-          console.log('   - GET  /api/carBrands      → List car brands');
-          console.log('   - GET  /api/searchOptions  → List search options');
-          console.log('   - GET  /api/products       → List products');
-          resolve(server);
-        });
+    const server = app.listen(port, host, () => {
+      console.log(`\n✅ Server running on ${host}:${port}`);
+      console.log(`📍 API URL: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+      console.log(`📍 Health check: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/health`);
+      console.log(`📍 Database: ${process.env.DB_NAME || 'not configured'}`);
+      console.log('\n📋 Available API endpoints:');
+      console.log('   - GET  /api/vehicles       → List all vehicles');
+      console.log('   - POST /api/vehicles       → Create vehicle');
+      console.log('   - GET  /api/vehicles/:id   → Get vehicle');
+      console.log('   - PUT  /api/vehicles/:id   → Update vehicle');
+      console.log('   - DELETE /api/vehicles/:id → Delete vehicle');
+      console.log('   - GET  /api/carBrands      → List car brands');
+      console.log('   - GET  /api/searchOptions  → List search options');
+      console.log('   - GET  /api/products       → List products');
+    });
 
-        // Handle server errors
-        server.on('error', (error) => {
-          if (error.code === 'EADDRINUSE') {
-            // If requested port fails and it's not 5000, automatically retry with 5000
-            if (portToUse === requestedPort && requestedPort !== 5000) {
-              console.warn(`\n⚠️  Port ${portToUse} is already in use`);
-              console.log(`🔄 Automatically retrying with port 5000...`);
-              server.close();
-              startServerOnPort(5000)
-                .then(resolve)
-                .catch(reject);
-            } else {
-              // Port 5000 also failed, or we're already on 5000 - give up
-              console.error(`\n❌ Port ${portToUse} is already in use`);
-              console.error(`💡 Solutions:`);
-              console.error(`   1. Stop the process using port ${portToUse}`);
-              console.error(`   2. Set a different PORT in .env file (e.g., PORT=5001)`);
-              reject(error);
-            }
-          } else {
-            console.error('❌ Server error:', error.message);
-            reject(error);
-          }
-        });
-      });
-    };
-
-    const server = await startServerOnPort(port);
-
-    // Graceful shutdown
+    // Handle server errors - NO AUTO-SWITCH
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`\n❌ Port ${port} is already in use`);
+        console.error(`💡 Solutions:`);
+        console.error(`   1. Stop the process using port ${port}`);
+        console.error(`   2. Set a different PORT in .env file (e.g., PORT=5001)`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server error:', error.message);
+        process.exit(1);
+      }
+    });
+    
+    // Graceful shutdown handlers remain unchanged
     process.on('SIGTERM', () => {
       console.log('SIGTERM signal received: closing HTTP server');
       server.close(() => {
@@ -458,7 +307,7 @@ async function startServer() {
         process.exit(0);
       });
     });
-
+    
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);

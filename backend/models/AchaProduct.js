@@ -13,37 +13,9 @@ class AchaProduct {
    * Initialize the acha_products table if it doesn't exist
    */
   static async initTable() {
-    try {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS acha_products (
-          id SERIAL PRIMARY KEY,
-          sub_id TEXT UNIQUE NOT NULL,
-          name TEXT,
-          brand_name TEXT,
-          model_name TEXT,
-          description TEXT,
-          price NUMERIC(12,3) DEFAULT 0.000,
-          images TEXT[],
-          quantity INTEGER DEFAULT 0,
-          product_references TEXT[] DEFAULT '{}',
-          promotion_percentage NUMERIC DEFAULT 0,
-          promotion_price NUMERIC DEFAULT NULL,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-        )
-      `);
-      
-      // FIX APPLIED FROM DIAGNOSTIC DOCUMENT: Create index for faster lookups
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_acha_products_sub_id ON acha_products(sub_id)
-      `);
-      
-      console.log('✅ acha_products table ready');
-      return true;
-    } catch (error) {
-      console.error('❌ Error creating acha_products table:', error.message);
-      return false;
-    }
+    // DEPRECATED: Tables are now created via db/schema.sql (single source of truth)
+    // This method is kept for backward compatibility but does nothing
+    return true;
   }
 
   /**

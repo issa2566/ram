@@ -81,83 +81,14 @@ const handleMulterError = (err, req, res, next) => {
 };
 
 /**
- * Initialize subcategories table with family_name column
- * Includes migrations for old schema versions
+ * Initialize subcategories table (DEPRECATED)
+ * Table creation is now handled by db/migrate.js via db/schema.sql
+ * This function is kept for backward compatibility but does nothing
  */
 async function initSubcategoriesTable() {
-  try {
-    // Create table if not exists
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS subcategories (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        family_name TEXT NOT NULL DEFAULT 'Uncategorized',
-        image_url TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // Check if family_name column exists, add if missing (migration)
-    const columnCheck = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'subcategories' 
-      AND column_name = 'family_name'
-    `);
-    
-    if (columnCheck.rows.length === 0) {
-      console.log('🔧 [MIGRATION] Adding family_name column to subcategories...');
-      await pool.query(`ALTER TABLE subcategories ADD COLUMN family_name TEXT DEFAULT 'Uncategorized'`);
-      // Update any NULL values
-      await pool.query(`UPDATE subcategories SET family_name = 'Uncategorized' WHERE family_name IS NULL`);
-      console.log('✅ [MIGRATION] family_name column added');
-    }
-    
-    // Migration: Fix unique constraint from UNIQUE(name) to UNIQUE(name, family_name)
-    // Check for old constraint on just 'name'
-    const oldConstraintCheck = await pool.query(`
-      SELECT conname 
-      FROM pg_constraint 
-      WHERE conrelid = 'subcategories'::regclass 
-      AND contype = 'u'
-      AND array_length(conkey, 1) = 1
-    `);
-    
-    if (oldConstraintCheck.rows.length > 0) {
-      for (const row of oldConstraintCheck.rows) {
-        console.log(`🔧 [MIGRATION] Dropping old unique constraint: ${row.conname}`);
-        try {
-          await pool.query(`ALTER TABLE subcategories DROP CONSTRAINT IF EXISTS ${row.conname}`);
-        } catch (e) {
-          console.log(`⚠️ Could not drop constraint ${row.conname}: ${e.message}`);
-        }
-      }
-    }
-    
-    // Create proper unique constraint on (name, family_name) if not exists
-    try {
-      await pool.query(`
-        ALTER TABLE subcategories 
-        ADD CONSTRAINT subcategories_name_family_unique UNIQUE(name, family_name)
-      `);
-      console.log('✅ [MIGRATION] Added UNIQUE(name, family_name) constraint');
-    } catch (e) {
-      // Constraint might already exist
-      if (!e.message.includes('already exists')) {
-        console.log('⚠️ Unique constraint note:', e.message);
-      }
-    }
-    
-    // Create index for faster lookups by family
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_subcategories_family ON subcategories(family_name)
-    `);
-    
-    console.log('✅ subcategories table ready (with family_name support)');
-  } catch (error) {
-    console.error('❌ Error creating subcategories table:', error.message);
-  }
+  // DEPRECATED: Tables are now created via db/schema.sql (single source of truth)
+  // This function is kept for backward compatibility but does nothing
+  return;
 }
 
 // Initialize table on module load

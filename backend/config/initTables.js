@@ -61,11 +61,11 @@ async function initAllTables() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
+        name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         phone TEXT,
+        address TEXT,
         role TEXT DEFAULT 'user',
         is_admin BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW(),

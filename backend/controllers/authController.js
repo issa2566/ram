@@ -65,8 +65,18 @@ class AuthController {
     
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      data: userResponse
+      user: {
+        id: userResponse.id,
+        name: userResponse.name,
+        email: userResponse.email,
+        role: userResponse.role
+      },
+      data: {
+        id: userResponse.id,
+        name: userResponse.name,
+        email: userResponse.email,
+        role: userResponse.role
+      }
     });
   }
 
@@ -110,8 +120,18 @@ class AuthController {
     
     res.status(200).json({
       success: true,
-      message: 'Login successful',
-      data: userResponse
+      user: {
+        id: userResponse.id,
+        name: userResponse.name,
+        email: userResponse.email,
+        role: userResponse.role
+      },
+      data: {
+        id: userResponse.id,
+        name: userResponse.name,
+        email: userResponse.email,
+        role: userResponse.role
+      }
     });
   }
 
